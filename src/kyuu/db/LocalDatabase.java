@@ -5,18 +5,14 @@ import kyuu.C;
 import kyuu.fast.FastLocIntMap;
 import kyuu.fast.FastLocStack;
 
-public class LocalDatabase {
-
-    C c;
-    DbConst dc;
+public class LocalDatabase extends Database {
 
     FastLocIntMap sectorStatusMap;
 
     FastLocStack pendingExploreStack;
 
     public LocalDatabase(C c) {
-        this.c = c;
-        this.dc = c.dc;
+        super(c);
         this.sectorStatusMap = new FastLocIntMap();
         this.pendingExploreStack = new FastLocStack(20);
     }

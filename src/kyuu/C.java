@@ -3,6 +3,7 @@ package kyuu;
 import aic2024.user.*;
 import kyuu.db.DbConst;
 import kyuu.db.LocalDatabase;
+import kyuu.db.RemoteDatabase;
 import kyuu.log.Logger;
 import kyuu.log.LoggerDummy;
 import kyuu.log.LoggerStandard;
@@ -24,8 +25,10 @@ public class C {
     public Scanner s;
     public DbConst dc;
     public LocalDatabase ldb;
+    public RemoteDatabase rdb;
 
-
+    int mapWidth;
+    int mapHeight;
 
     public final Direction[] directionsNorthCcw = {
             Direction.NORTH,
@@ -133,11 +136,15 @@ public class C {
         opponent = uc.getOpponent();
         dc = new DbConst();
         ldb = new LocalDatabase(this);
+        rdb = new RemoteDatabase(this);
         if (DEBUG) {
             logger = new LoggerStandard(uc);
         } else {
             logger = new LoggerDummy();
         }
+
+        mapWidth = uc.getMapWidth();
+        mapHeight = uc.getMapHeight();
 
         seed = (int)(uc.getRandomDouble() * 100);
         loc = uc.getLocation();
@@ -219,5 +226,14 @@ public class C {
                     Direction.ZERO, Direction.SOUTH, Direction.SOUTHEAST, Direction.EAST, Direction.NORTHEAST,
                     Direction.NORTH, Direction.NORTHWEST, Direction.WEST, Direction.SOUTHWEST};
         }
+    }
+
+    public Direction[] getFirstDirs(Direction first) {
+        return new Direction[]{
+                first, first.rotateRight(), first.rotateLeft(),
+                first.rotateRight().rotateRight(), first.rotateLeft().rotateLeft(),
+                first.opposite().rotateLeft(), first.opposite().rotateRight(),
+                first.opposite()
+        };
     }
 }
