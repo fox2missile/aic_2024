@@ -1,10 +1,7 @@
 package kyuu;
 
 import aic2024.user.*;
-import kyuu.message.EnemyHqMessage;
-import kyuu.message.Message;
-import kyuu.message.SeekSymmetryCommand;
-import kyuu.message.SeekSymmetryComplete;
+import kyuu.message.*;
 import kyuu.pathfinder.NaivePathFinder;
 import kyuu.tasks.RetrievePackageTask;
 import kyuu.tasks.ScanSectorTask;
@@ -20,6 +17,7 @@ public class AstronautTask extends Task {
     Task retrievePaxTask;
 
     SeekSymmetryCommand currentSeekSymmetryCommand;
+    RetrievePackageCommand currentRetPaxCmd;
 
     public AstronautTask(C c) {
         super(c);
@@ -28,6 +26,7 @@ public class AstronautTask extends Task {
         retrievePaxTask = new RetrievePackageTask(c);
         rdb.subscribeSeekSymmetryCommand = true;
         rdb.subscribeEnemyHq = true;
+        rdb.subscribePackageRetrievalCommand = true;
         c.logger.log("Spawn");
     }
 
@@ -39,10 +38,12 @@ public class AstronautTask extends Task {
 
         Message msg = rdb.retrieveNextMessage();
         while (msg != null) {
-            if (msg instanceof SeekSymmetryCommand) {
+            if (msg instanceof SeekSymmetryCommand && rdb.enemyHqSize == 0) {
                 currentSeekSymmetryCommand = (SeekSymmetryCommand)msg;
             } else if (msg instanceof EnemyHqMessage) {
                 currentSeekSymmetryCommand = null;
+            } else if (msg instanceof RetrievePackageCommand) {
+                currentRetPaxCmd = (RetrievePackageCommand) msg;
             }
             msg = rdb.retrieveNextMessage();
         }
@@ -52,7 +53,9 @@ public class AstronautTask extends Task {
 
         if (currentSeekSymmetryCommand != null) {
             handleSymmetrySeekCmd();
-        } else if (rdb.enemyHqSize > 0) {
+        } else if (currentRetPaxCmd != null) {
+            handleRetrievePax();
+        }else if (rdb.enemyHqSize > 0) {
             attackEnemyHq();
         } else {
             handleFreeRoam();
@@ -104,19 +107,38 @@ public class AstronautTask extends Task {
         }
     }
 
-    private void attackEnemyHq() {
-        int nearestHqIdx = Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize);
-        Location target = rdb.enemyHq[nearestHqIdx];
+    private void handleRetrievePax() {
+        if (uc.canPerformAction(ActionType.RETRIEVE, c.loc.directionTo(currentRetPaxCmd.target), 1)) {
+            uc.performAction(ActionType.RETRIEVE, c.loc.directionTo(currentRetPaxCmd.target), 1);
+            currentRetPaxCmd = null;
+        } else {
+            c.destination = currentRetPaxCmd.target;
+        }
+    }
 
-        if (uc.canSenseLocation(target) && uc.senseStructure(target) == null) {
-            rdb.sendEnemyHqDestroyedMessage(target);
+    private void attackEnemyHq() {
+
+        // attack anyone nearby
+        AstronautInfo[] enemies = uc.senseAstronauts(c.visionRange, c.team.getOpponent());
+        if (enemies.length > 0) {
+            int nearestIdx = Vector2D.getNearest(c.loc, enemies, enemies.length);
+            c.destination = enemies[nearestIdx].getLocation();
+            if (c.loc.distanceSquared(c.destination) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1)) {
+                uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1);
+            }
             return;
         }
 
-        if (uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1)) {
-            uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1);
-        } else {
-            c.destination = target;
+        int nearestHqIdx = Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize);
+        Location target = rdb.enemyHq[nearestHqIdx];
+        c.destination = target;
+
+        if (uc.canSenseLocation(target)) {
+            if (uc.senseStructure(target) == null) {
+                rdb.sendEnemyHqDestroyedMessage(target);
+            } else if (c.loc.distanceSquared(target) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1)) {
+                uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1);
+            }
         }
     }
 }
