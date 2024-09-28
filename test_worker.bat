@@ -1,0 +1,1 @@
+env\Scripts\python.exe test_worker.py

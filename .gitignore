@@ -1,0 +1,22 @@
+description/
+doc/
+games/
+installation_manual/
+jars/
+build/
+logs/
+out/
+env/
+src/*_v*/
+
+build.defaults
+build.xml
+.idea
+
+# Ignore Gradle project-specific cache directory
+.gradle
+
+# Ignore Gradle build output directory
+build
+
+*.zip
