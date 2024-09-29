@@ -21,6 +21,8 @@ public class AstronautTask extends Task {
 
     private final int initialOxygen;
 
+    boolean attackStarted;
+
     public AstronautTask(C c) {
         super(c);
 //        pathFinder = new NaivePathFinder(c);
@@ -34,6 +36,7 @@ public class AstronautTask extends Task {
         rdb.subscribeExpansionCommand = true;
         initialOxygen = (int)Math.floor(uc.getAstronautInfo().getOxygen());
         c.logger.log("Spawn");
+        attackStarted = false;
     }
 
     @Override
@@ -164,39 +167,76 @@ public class AstronautTask extends Task {
 
     private boolean attackEnemyHq() {
 
-        if (initialOxygen < 75) {
-            for (CarePackageInfo pax: uc.senseCarePackages(c.actionRange)) {
-                if (pax.getCarePackageType() == CarePackage.OXYGEN_TANK && uc.canPerformAction(ActionType.RETRIEVE, c.loc.directionTo(pax.getLocation()), 1)) {
-                    uc.performAction(ActionType.RETRIEVE, c.loc.directionTo(pax.getLocation()), 1);
+        if (!attackStarted && uc.senseStructures(c.actionRange * 4, c.team).length == 0 && uc.senseStructures(c.visionRange, c.team).length >= 1) {
+            int countAttackers = 0;
+            for (AstronautInfo a: uc.senseAstronauts(c.visionRange, c.team)) {
+                if (a.getCarePackage() == CarePackage.REINFORCED_SUIT && !a.isBeingConstructed()) {
+                    countAttackers++;
                 }
+            }
+            attackStarted = true;
+            if (countAttackers < 6) {
+                c.logger.log("waiting for friends");
+                c.destination = null;
+                return true;
             }
         }
 
-        // attack anyone nearby
-        AstronautInfo[] enemies = uc.senseAstronauts(c.visionRange, c.team.getOpponent());
-        if (enemies.length > 0) {
-            int nearestIdx = Vector2D.getNearest(c.loc, enemies, enemies.length);
-            c.destination = enemies[nearestIdx].getLocation();
-            if (c.loc.distanceSquared(c.destination) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1)) {
-                uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1);
-            }
-            return true;
-        }
+//        if (initialOxygen < 75) {
+//            for (CarePackageInfo pax: uc.senseCarePackages(c.actionRange)) {
+//                if (pax.getCarePackageType() == CarePackage.OXYGEN_TANK && uc.canPerformAction(ActionType.RETRIEVE, c.loc.directionTo(pax.getLocation()), 1)) {
+//                    uc.performAction(ActionType.RETRIEVE, c.loc.directionTo(pax.getLocation()), 1);
+//                }
+//            }
+//        }
 
         int nearestHqIdx = Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize);
         Location target = rdb.enemyHq[nearestHqIdx];
         if (Vector2D.manhattanDistance(c.loc, target) > uc.getAstronautInfo().getOxygen()) {
             return false;
         }
-        c.destination = target;
 
         if (uc.canSenseLocation(target)) {
             if (uc.senseStructure(target) == null) {
                 rdb.sendEnemyHqDestroyedMessage(target);
-            } else if (c.loc.distanceSquared(target) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1)) {
+                return true;
+            }
+            while (c.loc.distanceSquared(target) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1)) {
                 uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1);
             }
         }
+
+        // attack anyone nearby
+        AstronautInfo[] enemies = uc.senseAstronauts(c.actionRange, c.team.getOpponent());
+        if (enemies.length > 0) {
+            int attackIdx = -1;
+            for (int i = 0; i < enemies.length; i++) {
+                if (enemies[i].getLocation().distanceSquared(target) <= c.actionRange * 2 && c.loc.distanceSquared(enemies[i].getLocation()) <= c.actionRange) {
+                    attackIdx = i;
+                    break;
+                }
+            }
+            if (attackIdx != -1) {
+                c.destination = enemies[attackIdx].getLocation();
+                if (c.loc.distanceSquared(c.destination) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1)) {
+                    uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1);
+                }
+                if (c.canMove(c.loc.directionTo(c.destination))) {
+                    c.move(c.loc.directionTo(c.destination));
+                    while (c.loc.distanceSquared(target) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1)) {
+                        uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1);
+                    }
+                }
+            }
+
+        }
+
+        c.destination = target;
+        if (c.loc.distanceSquared(target) <= c.actionRange) {
+            c.destination = null;
+        }
+
+
         return true;
     }
 }
