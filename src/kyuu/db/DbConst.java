@@ -30,6 +30,16 @@ public class DbConst {
     public final int MSG_SIZE_DEFENSE_CMD = 3;
     // {DEFENDER ID, THREAT X, THREAT Y}
 
+    // MSG_ID_SURVEY_CMD
+    public final int MSG_SIZE_SURVEY_CMD = 3;
+    // {SURVEYOR ID, x, y}
+
+    // MSG_ID_EXPANSION
+    public final int MSG_SIZE_EXPANSION = 4;
+    // {worker id, x, y, state}
+    public final int EXPANSION_STATE_INIT = 0;
+    public final int EXPANSION_STATE_ESTABLISHED = 1;
+
     public final int MSG_SIZE_ENEMY_HQ = 2;
     // {x, y}
 
@@ -40,10 +50,19 @@ public class DbConst {
     public final int SYMMETRIC_SEEKER_COMPLETE_FAILED = 3;
     public final int SYMMETRIC_SEEKER_COMPLETE_STATUS_MASKER = 0x0000000F;
 
-    public final int MSG_ID_MASK_SYMMETRIC_SEEKER_COMPLETE = 0x01000000;
 
-    // MSG_ID_ENEMY_HQ_DESTROYED
+
+    // MSG_ID_SURVEY_COMPLETE
+    public final int SURVEY_NONE = 0;
+    public final int SURVEY_GOOD = 1;
+    public final int SURVEY_BAD = 2;
+    public final int SURVEY_COMPLETE_STATUS_MASKER = 0x0000000F;
+
+
+    public final int MSG_ID_MASK_SYMMETRIC_SEEKER_COMPLETE = 0x01000000;
     public final int MSG_ID_MASK_ENEMY_HQ_DESTROYED = 0x02000000;
+    public final int MSG_ID_MASK_SURVEY_COMPLETE = 0x03000000;
+    public final int MSG_ID_MASK_EXPANSION_ESTABLISHED = 0x04000000;
 
     // common maskers
     public final int MASKER_LOC_X = 0x00FF0000;
@@ -61,5 +80,9 @@ public class DbConst {
     public final int MSG_ID_ENEMY_HQ_DESTROYED = MSG_ID_BEGIN - 5;
     public final int MSG_ID_GET_PACKAGES_CMD = MSG_ID_BEGIN - 6;
     public final int MSG_ID_DEFENSE_CMD = MSG_ID_BEGIN - 7;
+    public final int MSG_ID_SURVEY_CMD = MSG_ID_BEGIN - 8;
+    public final int MSG_ID_SURVEY_COMPLETE = MSG_ID_BEGIN - 9;
+    public final int MSG_ID_EXPANSION = MSG_ID_BEGIN - 10;
+    public final int MSG_ID_EXPANSION_ESTABLISHED = MSG_ID_BEGIN - 11;
 
 }

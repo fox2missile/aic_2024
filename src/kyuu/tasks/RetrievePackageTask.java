@@ -9,9 +9,12 @@ import java.util.Objects;
 public class RetrievePackageTask extends Task {
 
     CarePackageInfo target;
-    public RetrievePackageTask(C c) {
+    float visionRange;
+
+    public RetrievePackageTask(C c, float visionRange) {
         super(c);
         target = null;
+        this.visionRange = visionRange;
     }
 
     @Override
@@ -21,7 +24,7 @@ public class RetrievePackageTask extends Task {
         }
         int bestScore = Integer.MIN_VALUE;
         CarePackageInfo bestPax = null;
-        for (CarePackageInfo pax: uc.senseCarePackages(c.visionRange)) {
+        for (CarePackageInfo pax: uc.senseCarePackages(visionRange)) {
             int dist = Vector2D.manhattanDistance(c.loc, pax.getLocation());
             if (dist > uc.getAstronautInfo().getOxygen()) {
                 continue;
@@ -29,7 +32,7 @@ public class RetrievePackageTask extends Task {
             int score = 1 - (dist * dist);
             CarePackage carePackageType = pax.getCarePackageType();
             if (carePackageType == CarePackage.SETTLEMENT) {
-                score += 300;
+                score += 400;
             } else if (carePackageType == CarePackage.DOME) {
                 score += 10;
             } else if (carePackageType == CarePackage.HYPERJUMP) {

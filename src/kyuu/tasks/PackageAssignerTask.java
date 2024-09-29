@@ -67,9 +67,11 @@ public class PackageAssignerTask extends Task {
             for (Direction dir: c.getFirstDirs(dirTarget)) {
                 if (uc.canEnlistAstronaut(dir, retrieveCost, null)) {
                     uc.enlistAstronaut(dir, retrieveCost, null);
-                    rdb.sendGetPackagesCommand(uc.senseAstronaut(c.loc.add(dir)).getID(), bestPax.getLocation());
+                    int enlistedId = uc.senseAstronaut(c.loc.add(dir)).getID();
+                    rdb.sendGetPackagesCommand(enlistedId, bestPax.getLocation());
                     wantedPackages.add(bestPax.getLocation());
                     uc.drawLineDebug(c.loc, bestPax.getLocation(), 0, 255, 0);
+                    ldb.pushAssignedThisRound(enlistedId);
                     return true;
                 }
             }

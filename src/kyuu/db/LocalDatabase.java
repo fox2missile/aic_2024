@@ -11,10 +11,33 @@ public class LocalDatabase extends Database {
 
     FastLocStack pendingExploreStack;
 
+    public boolean horizontalSymmetryPossible = true;
+    public boolean verticalSymmetryPossible = true;
+    public boolean rotationalSymmetryPossible = true;
+
+    public int[] assignedThisRound;
+    public int assignedThisRoundSize;
+
+
     public LocalDatabase(C c) {
         super(c);
         this.sectorStatusMap = new FastLocIntMap();
-        this.pendingExploreStack = new FastLocStack(20);
+        this.assignedThisRound = new int[5];
+        this.assignedThisRoundSize = 0;
+    }
+
+    public void resetAssignedThisRound() {
+        assignedThisRoundSize = 0;
+    }
+
+    public void pushAssignedThisRound(int id) {
+        if (assignedThisRoundSize < assignedThisRound.length) {
+            assignedThisRound[assignedThisRoundSize++] = id;
+        }
+    }
+
+    public int popAssignedThisRound() {
+        return assignedThisRound[--assignedThisRoundSize];
     }
 
     public void updateSectorDiscovered(Location sector) {

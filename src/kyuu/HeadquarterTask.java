@@ -9,6 +9,7 @@ import kyuu.message.SeekSymmetryCommand;
 import kyuu.message.SeekSymmetryComplete;
 import kyuu.pathfinder.ParallelSearch;
 import kyuu.tasks.DefenseAssginerTask;
+import kyuu.tasks.ExpansionTask;
 import kyuu.tasks.PackageAssignerTask;
 import kyuu.tasks.Task;
 
@@ -19,9 +20,7 @@ public class HeadquarterTask extends Task {
     private final int SYMMETRY_VERTICAL = 1;
     private final int SYMMETRY_ROTATIONAL = 2;
 
-    boolean verticalSymmetryPossible = true;
-    boolean horizontalSymmetryPossible = true;
-    boolean rotationalSymmetryPossible = true;
+
     Location[] symmetryCandidates;
     boolean[] symmetryAssigned;
 
@@ -32,21 +31,27 @@ public class HeadquarterTask extends Task {
 
     Task packageAssignerTask;
     Task defenseAssignerTask;
+    Task expansionTask;
 
     HeadquarterTask(C c) {
         super(c);
         rdb.subscribeSeekSymmetryComplete = true;
         rdb.subscribeEnemyHq = true;
         rdb.subscribeSeekSymmetryCommand = true;
+        rdb.subscribeSurveyComplete = true;
+        rdb.subscribeExpansionEstablished = true;
         packageSearch = ParallelSearch.getDefaultSearch(c);
         packageAssignerTask = new PackageAssignerTask(c);
         defenseAssignerTask = new DefenseAssginerTask(c);
+        expansionTask = new ExpansionTask(c);
     }
 
 
     @Override
     public void run() {
+        c.s.scan();
         enemyHqBroadcasted = false;
+        ldb.resetAssignedThisRound();
 
         defenseAssignerTask.run();
 
@@ -80,6 +85,7 @@ public class HeadquarterTask extends Task {
                 broadcastEnemyHq();
                 packageAssignerTask.run();
                 enlistAttackers();
+                expansionTask.run();
             }
 
 
@@ -234,30 +240,30 @@ public class HeadquarterTask extends Task {
                 }
             }
             if (symIdx % 3 == SYMMETRY_HORIZONTAL) {
-                horizontalSymmetryPossible = false;
+                ldb.horizontalSymmetryPossible = false;
             } else if (symIdx % 3 == SYMMETRY_VERTICAL) {
-                verticalSymmetryPossible = false;
+                ldb.verticalSymmetryPossible = false;
             } else {
-                rotationalSymmetryPossible = false;
+                ldb.rotationalSymmetryPossible = false;
             }
-            if (horizontalSymmetryPossible && !verticalSymmetryPossible && !rotationalSymmetryPossible) {
+            if (ldb.horizontalSymmetryPossible && !ldb.verticalSymmetryPossible && !ldb.rotationalSymmetryPossible) {
                 handleSymmetryFound(SYMMETRY_HORIZONTAL);
                 return;
-            } else if (!horizontalSymmetryPossible && verticalSymmetryPossible && !rotationalSymmetryPossible) {
+            } else if (!ldb.horizontalSymmetryPossible && ldb.verticalSymmetryPossible && !ldb.rotationalSymmetryPossible) {
                 handleSymmetryFound(SYMMETRY_VERTICAL);
                 return;
-            } else if (!horizontalSymmetryPossible && !verticalSymmetryPossible && rotationalSymmetryPossible) {
+            } else if (!ldb.horizontalSymmetryPossible && !ldb.verticalSymmetryPossible && ldb.rotationalSymmetryPossible) {
                 handleSymmetryFound(SYMMETRY_ROTATIONAL);
                 return;
             }
             c.logger.log("current symmetry: horizontalSymmetryPossible %s | verticalSymmetryPossible %s | rotationalSymmetryPossible %s",
-                    horizontalSymmetryPossible, verticalSymmetryPossible, rotationalSymmetryPossible);
+                    ldb.horizontalSymmetryPossible, ldb.verticalSymmetryPossible, ldb.rotationalSymmetryPossible);
         }
     }
 
     private void handleSymmetryFound(int symmetryId) {
         c.logger.log("Symmetry found! horizontalSymmetryPossible %s | verticalSymmetryPossible %s | rotationalSymmetryPossible %s",
-                horizontalSymmetryPossible, verticalSymmetryPossible, rotationalSymmetryPossible);
+                ldb.horizontalSymmetryPossible, ldb.verticalSymmetryPossible, ldb.rotationalSymmetryPossible);
 
         for (int i = 0; i < symmetryCandidates.length; i++) {
             if (i % 3 != symmetryId) {
