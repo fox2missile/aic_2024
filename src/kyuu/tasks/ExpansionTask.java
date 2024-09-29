@@ -11,13 +11,20 @@ public class ExpansionTask extends Task {
 
     final Location[] expansionSites;
     final int COST_SURVEY = 20;
-    final int EXPANSION_COOLDOWN = 30;
+
+    final int EXPANSION_COOLDOWN_SLOW = 20;
+    final int EXPANSION_COOLDOWN_NORMAL = 10;
+    final int EXPANSION_COOLDOWN_EXTREME = 3;
 
     int[] surveyorTimeout;
 
 
     int[] expansionWorkers;
     int[] expansionTimeout;
+
+    int[] deepExpansion;
+
+    int expansionCooldown;
 
 
     public ExpansionTask(C c) {
@@ -35,6 +42,7 @@ public class ExpansionTask extends Task {
         rdb.surveySites = expansionSites;
         expansionWorkers = new int[c.allDirs.length];
         expansionTimeout = new int[c.allDirs.length];
+        deepExpansion = new int[c.allDirs.length];
     }
 
 
@@ -42,6 +50,13 @@ public class ExpansionTask extends Task {
     public void run() {
         if (uc.getStructureInfo().getOxygen() < 200) {
             return;
+        }
+        expansionCooldown = EXPANSION_COOLDOWN_NORMAL;
+        if (uc.getStructureInfo().getOxygen() > 500) {
+            expansionCooldown = EXPANSION_COOLDOWN_EXTREME;
+        }
+        if (uc.senseAstronauts(c.visionRange, c.team).length > 10) {
+            expansionCooldown = EXPANSION_COOLDOWN_SLOW;
         }
         eliminateExpansionSites();
 
@@ -113,7 +128,13 @@ public class ExpansionTask extends Task {
                 }
                 int givenOxygen = 12;
                 if (rdb.expansionStates[i] == dc.EXPANSION_STATE_ESTABLISHED) {
-                    givenOxygen = 11;
+                    if (uc.getStructureInfo().getOxygen() > 400 && deepExpansion[i] % 4 != 0) {
+                        givenOxygen = 20;
+                    } else {
+                        givenOxygen = 11;
+                    }
+                    deepExpansion[i]++;
+
                 }
                 for (Direction dir: c.getFirstDirs(c.allDirs[i])) {
                     if (uc.canEnlistAstronaut(dir, givenOxygen, null)) {
@@ -122,7 +143,7 @@ public class ExpansionTask extends Task {
                         rdb.sendExpansionCommand(enlistedId, expansionSites[i], rdb.expansionStates[i]);
                         expansionWorkers[i] = enlistedId;
                         if (rdb.expansionStates[i] == dc.EXPANSION_STATE_ESTABLISHED) {
-                            expansionTimeout[i] = EXPANSION_COOLDOWN;
+                            expansionTimeout[i] = expansionCooldown;
                         } else {
                             expansionTimeout[i] = 0;
                         }

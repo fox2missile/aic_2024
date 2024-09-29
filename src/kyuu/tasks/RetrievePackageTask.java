@@ -44,9 +44,9 @@ public class RetrievePackageTask extends Task {
             } else if (carePackageType == CarePackage.SURVIVAL_KIT) {
                 score += 50;
             } else if (carePackageType == CarePackage.OXYGEN_TANK) {
-                score += 100;
-            } else if (carePackageType == CarePackage.PLANTS) {
                 score += 200;
+            } else if (carePackageType == CarePackage.PLANTS) {
+                score += 100;
             }
             if (score > bestScore) {
                 bestPax = pax;
