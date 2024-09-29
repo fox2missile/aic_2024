@@ -73,14 +73,14 @@ public class RemoteDatabase extends Database {
                     return new SeekSymmetryCommand(new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage()));
                 } else {
                     // skip payload
-                    uc.eraseBroadcastBuffer(dc.MSG_SIZE_SYMMETRIC_SEEKER_CMD);
+                    uc.eraseBroadcastBuffer(dc.MSG_SIZE_SYMMETRIC_SEEKER_CMD - 1); // -1 ID
                 }
             } else if (msgId == dc.MSG_ID_GET_PACKAGES_CMD) {
                 if (subscribePackageRetrievalCommand && (c.id == uc.pollBroadcast().getMessage())) {
                     return new RetrievePackageCommand(new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage()));
                 } else {
                     // skip payload
-                    uc.eraseBroadcastBuffer(dc.MSG_SIZE_GET_PACKAGES_CMD);
+                    uc.eraseBroadcastBuffer(dc.MSG_SIZE_GET_PACKAGES_CMD - 1); // -1 ID
                 }
             } else if (msgId == dc.MSG_ID_SYMMETRIC_SEEKER_COMPLETE) {
                 if (subscribeSeekSymmetryComplete) {

@@ -371,7 +371,7 @@ public class ParallelSearch {
         Direction generalDir = center.directionTo(target);
         if (targetLocalX >= 0 && targetLocalX < 8 && targetLocalY >= 0 && targetLocalY < 8) {
             destinationMask[0] |= (1L << getMatrixIdx(targetLocalX, targetLocalY));
-            return calculateBestDirection(destinationMask, generalDir, moveBackDir, steps);
+            return calculateBestDirection(destinationMask, generalDir, moveBackDir, steps, false);
         }
         if (Objects.requireNonNull(generalDir) == Direction.NORTH) {
             destinationMask[0] = NORTH_GENERAL_DIRECTION_DESTINATION;
@@ -392,7 +392,7 @@ public class ParallelSearch {
         } else if (generalDir == Direction.ZERO) {
             return null;
         }
-        return calculateBestDirection(destinationMask, generalDir, moveBackDir, steps);
+        return calculateBestDirection(destinationMask, generalDir, moveBackDir, steps, true);
     }
 
     private long getGeneralDirectionDestinationMask(Direction dir) {
@@ -416,13 +416,16 @@ public class ParallelSearch {
         return 0;
     }
 
-    private Direction  calculateBestDirection(long[] destinationMask, Direction generalDir, Direction moveBackDir, int steps) {
+    private Direction  calculateBestDirection(long[] destinationMask, Direction generalDir, Direction moveBackDir, int steps, boolean force) {
         maxStep = steps;
         reachable = new long[maxStep + 1];
         long passable = passabilityStrategy.getPassabilityMask(originX, originY);
 //        printMatrix(passable, -1, -1, "---");
 //        printMatrix(destinationMask[0], -1, -1, "---");
         reachable[0] = destinationMask[0] & passable;
+        if (force) {
+            reachable[0] |= destinationMask[0];
+        }
         if (moveBackDir != null) {
             Location moveBackLoc = c.loc.add(moveBackDir);
             passable &= ~(1L << (getMatrixIdx(moveBackLoc.add(-originX, -originY))));

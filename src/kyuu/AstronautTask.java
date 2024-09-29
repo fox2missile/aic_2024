@@ -3,15 +3,16 @@ package kyuu;
 import aic2024.user.*;
 import kyuu.message.*;
 import kyuu.pathfinder.NaivePathFinder;
+import kyuu.tasks.MoveTask;
 import kyuu.tasks.RetrievePackageTask;
 import kyuu.tasks.ScanSectorTask;
 import kyuu.tasks.Task;
 
 public class AstronautTask extends Task {
 
-//    Task moveTask;
+    Task moveTask;
 
-    NaivePathFinder pathFinder;
+//    NaivePathFinder pathFinder;
 
     Task scanSectorTask;
     Task retrievePaxTask;
@@ -21,7 +22,8 @@ public class AstronautTask extends Task {
 
     public AstronautTask(C c) {
         super(c);
-        pathFinder = new NaivePathFinder(c);
+//        pathFinder = new NaivePathFinder(c);
+        moveTask = new MoveTask(c);
         scanSectorTask = new ScanSectorTask(c);
         retrievePaxTask = new RetrievePackageTask(c);
         rdb.subscribeSeekSymmetryCommand = true;
@@ -61,9 +63,10 @@ public class AstronautTask extends Task {
             handleFreeRoam();
         }
 
-        pathFinder.initTurn();
+//        pathFinder.initTurn();
         if (c.destination != null) {
-            pathFinder.move(c.destination);
+//            pathFinder.move(c.destination);
+            moveTask.run();
             c.uc.drawLineDebug(c.uc.getLocation(), c.destination, 0, 255, 0);
             c.destination = null;
         }
