@@ -72,4 +72,28 @@ public class Scanner {
         MapObject obj = c.uc.senseObjectAtLocation(loc);
         return c.isObstacle(obj);
     }
+
+    boolean isReachableDirectly(Location target) {
+        Location currentLoc = uc.getLocation();
+        for (int i = c.visionRangeStep; i != 0 && !currentLoc.equals(target); i--) {
+            Direction dir = currentLoc.directionTo(target);
+            Location next = currentLoc.add(dir);
+            if (uc.canSenseLocation(next) && !c.isObstacle(uc.senseObjectAtLocation(next))) {
+                currentLoc = next;
+                continue;
+            }
+            next = currentLoc.add(dir.rotateLeft());
+            if (uc.canSenseLocation(next) && !c.isObstacle(uc.senseObjectAtLocation(next))) {
+                currentLoc = next;
+                continue;
+            }
+            next = currentLoc.add(dir.rotateRight());
+            if (uc.canSenseLocation(next) && !c.isObstacle(uc.senseObjectAtLocation(next))) {
+                currentLoc = next;
+                continue;
+            }
+            break;
+        }
+        return currentLoc.equals(target);
+    }
 }
