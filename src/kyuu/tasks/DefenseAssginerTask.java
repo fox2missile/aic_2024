@@ -56,6 +56,7 @@ public class DefenseAssginerTask extends Task {
                             // no more oxygen!
                             return;
                         }
+                        enemyStrength /= 4;
                     }
                 } else {
                     if (uc.canEnlistAstronaut(dir, 11, null)) {
