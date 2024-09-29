@@ -14,6 +14,7 @@ public class RemoteDatabase extends Database {
     public boolean subscribeSeekSymmetryCommand = false;
     public boolean subscribeSeekSymmetryComplete = false;
     public boolean subscribeEnemyHq = false;
+    public boolean subscribeDefenseCommand = false;
 
     public boolean subscribePackageRetrievalCommand = false;
 
@@ -62,6 +63,13 @@ public class RemoteDatabase extends Database {
     }
 
 
+    public void sendDefenseCommand(int defenderId, Location targetLoc) {
+        uc.performAction(ActionType.BROADCAST, null, dc.MSG_SIZE_DEFENSE_CMD);
+        uc.performAction(ActionType.BROADCAST, null, defenderId);
+        uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
+        uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
+    }
+
 
     public Message retrieveNextMessage() {
         BroadcastInfo b = uc.pollBroadcast();
@@ -81,6 +89,13 @@ public class RemoteDatabase extends Database {
                 } else {
                     // skip payload
                     uc.eraseBroadcastBuffer(dc.MSG_SIZE_GET_PACKAGES_CMD - 1); // -1 ID
+                }
+            } else if (msgId == dc.MSG_ID_DEFENSE_CMD) {
+                if (subscribeDefenseCommand && (c.id == uc.pollBroadcast().getMessage())) {
+                    return new DefenseCommand(new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage()));
+                } else {
+                    // skip payload
+                    uc.eraseBroadcastBuffer(dc.MSG_SIZE_DEFENSE_CMD - 1); // -1 ID
                 }
             } else if (msgId == dc.MSG_ID_SYMMETRIC_SEEKER_COMPLETE) {
                 if (subscribeSeekSymmetryComplete) {
@@ -169,6 +184,8 @@ public class RemoteDatabase extends Database {
             return dc.MSG_ID_ENEMY_HQ;
         } else if (broadcasted == dc.MSG_ID_GET_PACKAGES_CMD) {
             return dc.MSG_ID_GET_PACKAGES_CMD;
+        } else if (broadcasted == dc.MSG_ID_DEFENSE_CMD) {
+            return dc.MSG_ID_DEFENSE_CMD;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_SYMMETRIC_SEEKER_COMPLETE) {
             return dc.MSG_ID_SYMMETRIC_SEEKER_COMPLETE;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_ENEMY_HQ_DESTROYED) {
