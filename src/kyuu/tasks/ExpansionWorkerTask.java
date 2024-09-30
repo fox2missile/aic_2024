@@ -72,6 +72,7 @@ public class ExpansionWorkerTask extends Task {
 
     @Override
     public void run() {
+        c.s.trySendAlert();
         if (cmd.state == dc.EXPANSION_STATE_INIT) {
             handleInit();
         } else {
@@ -163,6 +164,7 @@ public class ExpansionWorkerTask extends Task {
     private void handleInit() {
         if (c.loc.equals(cmd.target) || (uc.canSenseLocation(cmd.target) && c.isObstacle(uc.senseObjectAtLocation(cmd.target)))) {
             if (uc.senseObjectAtLocation(c.loc) == MapObject.TERRAFORMED) {
+                // todo: next 1 or 2 worker will do the same thing..
                 rdb.sendExpansionEstablishedMsg(new ExpansionEstablishedMessage(cmd.target, cmd.expansionId));
                 return;
             }

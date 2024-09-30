@@ -10,7 +10,7 @@ import kyuu.log.LoggerStandard;
 
 // C stands for Context
 public class C {
-    public final boolean DEBUG = true;
+    public final boolean DEBUG = false;
     public UnitController uc;
     public Team team;
     public Team opponent;

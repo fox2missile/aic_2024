@@ -58,6 +58,7 @@ public class DbConst {
     public final int SURVEY_BAD = 2;
     public final int SURVEY_COMPLETE_EXPANSION_ID_MASKER = 0x000000FF;
     public final int EXPANSION_ESTABLISHED_EXPANSION_ID_MASKER = 0x000000FF;
+    public final int ALERT_STRENGTH_MASKER = 0x000000FF;
 
 
     public final int MSG_ID_MASK_SYMMETRIC_SEEKER_COMPLETE = 0x01000000;
@@ -66,6 +67,7 @@ public class DbConst {
     public final int MSG_ID_MASK_SURVEY_COMPLETE_BAD = 0x04000000;
     public final int MSG_ID_MASK_SURVEY_FAILED = 0x05000000;
     public final int MSG_ID_MASK_EXPANSION_ESTABLISHED = 0x06000000;
+    public final int MSG_ID_MASK_ALERT = 0x07000000;
 
     // common maskers
     public final int MASKER_LOC_X = 0x00FF0000;
@@ -89,5 +91,6 @@ public class DbConst {
     public final int MSG_ID_SURVEY_FAILED = MSG_ID_BEGIN - 11;
     public final int MSG_ID_EXPANSION = MSG_ID_BEGIN - 12;
     public final int MSG_ID_EXPANSION_ESTABLISHED = MSG_ID_BEGIN - 13;
+    public final int MSG_ID_ALERT = MSG_ID_BEGIN - 14;
 
 }

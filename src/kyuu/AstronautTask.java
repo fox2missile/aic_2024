@@ -34,6 +34,7 @@ public class AstronautTask extends Task {
         rdb.subscribePackageRetrievalCommand = true;
         rdb.subscribeSurveyCommand = true;
         rdb.subscribeExpansionCommand = true;
+        rdb.subscribeDefenseCommand = true;
         initialOxygen = (int)Math.floor(uc.getAstronautInfo().getOxygen());
         c.logger.log("Spawn");
         attackStarted = false;
@@ -202,7 +203,8 @@ public class AstronautTask extends Task {
 
         int nearestHqIdx = Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize);
         Location target = rdb.enemyHq[nearestHqIdx];
-        if (Vector2D.manhattanDistance(c.loc, target) > uc.getAstronautInfo().getOxygen()) {
+        int dist = Vector2D.chebysevDistance(c.loc, target);
+        if (dist > 5 && Vector2D.chebysevDistance(c.loc, target) > uc.getAstronautInfo().getOxygen()) {
             return false;
         }
 

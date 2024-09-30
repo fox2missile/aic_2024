@@ -3,6 +3,7 @@ package kyuu;
 import aic2024.user.*;
 import kyuu.fast.FastIntIntMap;
 import kyuu.fast.FastLocSet;
+import kyuu.message.AlertMessage;
 
 
 public class Scanner {
@@ -25,6 +26,7 @@ public class Scanner {
     private boolean visibleAlliesValid;
     FastIntIntMap visibleEnemies;
     private boolean visibleEnemiesValid;
+    public int immediateBlockers;
 
     public Scanner(C c) {
         this.c = c;
@@ -39,8 +41,37 @@ public class Scanner {
         visibleEnemiesValid = false;
         prevLoc = c.loc;
     }
-    
-    public int immediateBlockers;
+
+    public void trySendAlert() {
+        if (!uc.isStructure()) {
+            if (uc.senseStructures(c.visionRange, c.team).length > 0) {
+                return;
+            }
+        }
+        AstronautInfo[] enemies = uc.senseAstronauts(c.visionRange, c.opponent);
+        if (enemies.length == 0) {
+            return;
+        }
+        int totalStrength = 0;
+        int sumX = 0;
+        int sumY = 0;
+        for (AstronautInfo enemy: enemies) {
+            int strength = 1;
+            if (enemy.getCarePackage() == CarePackage.REINFORCED_SUIT) {
+                strength = c.bitCount((int)(Math.ceil(enemy.getOxygen())));
+            }
+            totalStrength += strength;
+            sumX += enemy.getLocation().x * strength;
+            sumY += enemy.getLocation().y * strength;
+        }
+        if (totalStrength <= 3) {
+            return;
+        }
+        AlertMessage msg = new AlertMessage(new Location(sumX / totalStrength, sumY / totalStrength), totalStrength);
+        c.rdb.trySendAlert(msg);
+    }
+
+
 
     public void scan() {
         visibleAllies.clear();
