@@ -24,6 +24,8 @@ public class ExpansionTask extends Task {
     int id;
     Location expansionLoc;
 
+    int currentExpansionDirIdx;
+
     public ExpansionTask(C c, Location loc, int localExpansionId) {
         super(c);
         expansionLoc = loc;
@@ -39,6 +41,7 @@ public class ExpansionTask extends Task {
         expansionWorkers = new int[c.allDirs.length];
         expansionTimeout = new int[c.allDirs.length];
         deepExpansion = new int[c.allDirs.length];
+        currentExpansionDirIdx = 0;
     }
 
 
@@ -105,59 +108,65 @@ public class ExpansionTask extends Task {
     }
 
     private void sendExpansionWorkers() {
-        for (int i = 0; i < c.allDirs.length; i++) {
+        int lastExpansionDirIdx = currentExpansionDirIdx;
+        for (int k = 0; k < c.allDirs.length; k++) {
+            int i = (k + currentExpansionDirIdx) % c.allDirs.length;
             if (rdb.surveyorStates[id][i] != dc.SURVEY_GOOD) {
                 continue;
             }
 
             if (uc.getStructureInfo().getOxygen() < 200) {
-                return;
+                break;
             }
-            if (!c.s.isAllyVisible(expansionWorkers[i])) {
-                expansionWorkers[i] = 0;
-                if (expansionTimeout[i] > 0) {
-                    expansionTimeout[i]--;
-                    continue;
+            if (c.s.isAllyVisible(expansionWorkers[i])) {
+                continue;
+            }
+            expansionWorkers[i] = 0;
+            if (expansionTimeout[i] > 0) {
+                expansionTimeout[i]--;
+                continue;
+            }
+            int givenOxygen = 12;
+            if (rdb.expansionStates[id][i] == dc.EXPANSION_STATE_ESTABLISHED) {
+                if (uc.getStructureInfo().getOxygen() > 400 && deepExpansion[i] % 4 != 0) {
+                    givenOxygen = 20;
+                } else {
+                    givenOxygen = 11;
                 }
-                int givenOxygen = 12;
-                if (rdb.expansionStates[id][i] == dc.EXPANSION_STATE_ESTABLISHED) {
-                    if (uc.getStructureInfo().getOxygen() > 400 && deepExpansion[i] % 4 != 0) {
-                        givenOxygen = 20;
+                deepExpansion[i]++;
+
+            }
+            for (Direction dir: c.getFirstDirs(c.allDirs[i])) {
+                if (uc.canEnlistAstronaut(dir, givenOxygen, null)) {
+                    uc.enlistAstronaut(dir, givenOxygen, null);
+                    int enlistedId = uc.senseAstronaut(c.loc.add(dir)).getID();
+                    rdb.sendExpansionCommand(enlistedId, rdb.expansionSites[id][i], rdb.expansionStates[id][i], id);
+                    expansionWorkers[i] = enlistedId;
+                    lastExpansionDirIdx = i;
+                    if (rdb.expansionStates[id][i] == dc.EXPANSION_STATE_ESTABLISHED) {
+                        expansionTimeout[i] = expansionCooldown;
                     } else {
-                        givenOxygen = 11;
+                        expansionTimeout[i] = 0;
                     }
-                    deepExpansion[i]++;
-
-                }
-                for (Direction dir: c.getFirstDirs(c.allDirs[i])) {
-                    if (uc.canEnlistAstronaut(dir, givenOxygen, null)) {
-                        uc.enlistAstronaut(dir, givenOxygen, null);
-                        int enlistedId = uc.senseAstronaut(c.loc.add(dir)).getID();
-                        rdb.sendExpansionCommand(enlistedId, rdb.expansionSites[id][i], rdb.expansionStates[id][i], id);
-                        expansionWorkers[i] = enlistedId;
-                        if (rdb.expansionStates[id][i] == dc.EXPANSION_STATE_ESTABLISHED) {
-                            expansionTimeout[i] = expansionCooldown;
-                        } else {
-                            expansionTimeout[i] = 0;
-                        }
-                        break;
-                    }
+                    break;
                 }
             }
-
-
 
         }
 
+        currentExpansionDirIdx = (lastExpansionDirIdx + 1) % c.allDirs.length;
+
         // send package worker and defense worker after their primary work, prioritize established expansion
-        for (int i = 0; i < c.allDirs.length && ldb.assignedThisRoundSize > 0; i++) {
+        for (int k = 0; k < c.allDirs.length && ldb.assignedThisRoundSize > 0; k++) {
+            int i = (k + currentExpansionDirIdx) % c.allDirs.length;
             if (rdb.surveyorStates[id][i] != dc.SURVEY_GOOD && rdb.expansionStates[id][i] != dc.EXPANSION_STATE_ESTABLISHED) {
                 continue;
             }
             int assign = ldb.popAssignedThisRound();
             rdb.sendExpansionCommand(assign, rdb.expansionSites[id][i], rdb.expansionStates[id][i], id);
         }
-        for (int i = 0; i < c.allDirs.length && ldb.assignedThisRoundSize > 0; i++) {
+        for (int k = 0; k < c.allDirs.length && ldb.assignedThisRoundSize > 0; k++) {
+            int i = (k + currentExpansionDirIdx) % c.allDirs.length;
             if (rdb.surveyorStates[id][i] != dc.SURVEY_GOOD) {
                 continue;
             }
