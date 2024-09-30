@@ -163,7 +163,7 @@ public class ExpansionWorkerTask extends Task {
     private void handleInit() {
         if (c.loc.equals(cmd.target) || (uc.canSenseLocation(cmd.target) && c.isObstacle(uc.senseObjectAtLocation(cmd.target)))) {
             if (uc.senseObjectAtLocation(c.loc) == MapObject.TERRAFORMED) {
-                rdb.sendExpansionEstablishedMsg(new ExpansionEstablishedMessage(cmd.target));
+                rdb.sendExpansionEstablishedMsg(new ExpansionEstablishedMessage(cmd.target, cmd.expansionId));
                 return;
             }
         }

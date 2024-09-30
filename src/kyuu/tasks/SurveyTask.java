@@ -9,37 +9,37 @@ import kyuu.pathfinder.ParallelSearch;
 
 public class SurveyTask extends Task {
 
-    Location target;
+    SurveyCommand cmd;
     ParallelSearch search;
 
     boolean tryAlter;
     Direction surveyDirection;
     public SurveyTask(C c, SurveyCommand cmd) {
         super(c);
-        target = cmd.target;
         search = ParallelSearch.getDefaultSearch(c);
         tryAlter = false;
         for (StructureInfo s: uc.senseStructures(c.actionRange, c.team)) {
-            surveyDirection = s.getLocation().directionTo(target);
+            surveyDirection = s.getLocation().directionTo(cmd.target);
         }
+        this.cmd = cmd;
     }
 
     @Override
     public void run() {
-        int dist = Vector2D.manhattanDistance(c.loc, target);
-        c.destination = target;
+        int dist = Vector2D.manhattanDistance(c.loc, cmd.target);
+        c.destination = cmd.target;
         if (uc.getAstronautInfo().getOxygen() < 2) {
-            rdb.sendSurveyCompleteMsg(new SurveyComplete(target, dc.SURVEY_BAD));
+            rdb.sendSurveyCompleteMsg(new SurveyComplete(cmd.target, dc.SURVEY_BAD, cmd.expansionId));
             return;
         }
         if (dist > 3) {
             return;
-        } else if (uc.canSenseLocation(target) && c.isObstacle(uc.senseObjectAtLocation(target))) {
-            for (Direction dir: c.getFirstDirs(target.directionTo(c.loc))) {
-                Location alt = target.add(dir);
+        } else if (uc.canSenseLocation(cmd.target) && c.isObstacle(uc.senseObjectAtLocation(cmd.target))) {
+            for (Direction dir: c.getFirstDirs(cmd.target.directionTo(c.loc))) {
+                Location alt = cmd.target.add(dir);
                 if (uc.canSenseLocation(alt) && !c.isObstacle(uc.senseObjectAtLocation(alt))) {
                     c.destination = alt;
-                    target = alt;
+                    cmd.target = alt;
                     tryAlter = true;
                     return;
                 }
@@ -48,15 +48,15 @@ public class SurveyTask extends Task {
             // simple alternative not found
             if (tryAlter) {
                 // already altered once
-                rdb.sendSurveyCompleteMsg(new SurveyComplete(target, dc.SURVEY_BAD));
+                rdb.sendSurveyCompleteMsg(new SurveyComplete(cmd.target, dc.SURVEY_BAD, cmd.expansionId));
                 return;
             }
 
             // alter target
-            target = target.add(surveyDirection);
-            c.destination = target;
+            cmd.target = cmd.target.add(surveyDirection);
+            c.destination = cmd.target;
             tryAlter = true;
-        } else if (c.loc.equals(target)) {
+        } else if (c.loc.equals(cmd.target)) {
             int badSpotsMax = 30;
             for (Direction dir: c.fourDirs) {
                 if (uc.isOutOfMap(c.loc.add(dir.dx * 5, dir.dy * 5))) {
@@ -67,10 +67,10 @@ public class SurveyTask extends Task {
                 badSpotsMax -= 5;
             }
             int status = uc.senseObjects(MapObject.WATER, c.visionRange).length > badSpotsMax ? dc.SURVEY_BAD : dc.SURVEY_GOOD;
-            rdb.sendSurveyCompleteMsg(new SurveyComplete(target, status));
+            rdb.sendSurveyCompleteMsg(new SurveyComplete(cmd.target, status, cmd.expansionId));
             return;
-        } else if (search.calculateBestDirection(target, c.loc.directionTo(target).opposite(), 12) == null) {
-            rdb.sendSurveyCompleteMsg(new SurveyComplete(target, dc.SURVEY_BAD));
+        } else if (search.calculateBestDirection(cmd.target, c.loc.directionTo(cmd.target).opposite(), 12) == null) {
+            rdb.sendSurveyCompleteMsg(new SurveyComplete(cmd.target, dc.SURVEY_BAD, cmd.expansionId));
             return;
         }
 
