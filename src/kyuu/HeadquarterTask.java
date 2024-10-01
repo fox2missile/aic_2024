@@ -74,16 +74,18 @@ public class HeadquarterTask extends Task {
         enemyHqBroadcasted = false;
         ldb.resetAssignedThisRound();
 
-        defenseAssignerTask.run();
 
         if (uc.getRound() == 0) {
             rdb.sendHqInfo();
         } else if (uc.getRound() == 1) {
             rdb.initHqLocs();
             rdb.sendHqInfo();
+            defenseAssignerTask.run();
         } else if (uc.getRound() == 2) {
             initSymmetryCandidates();
+            defenseAssignerTask.run();
         } else  {
+            defenseAssignerTask.run();
             Message msg = rdb.retrieveNextMessage();
             while (msg != null) {
                 if (msg instanceof SeekSymmetryComplete) {
