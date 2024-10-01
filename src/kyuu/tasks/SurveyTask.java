@@ -58,16 +58,35 @@ public class SurveyTask extends Task {
             c.destination = cmd.target;
             tryAlter = true;
         } else if (c.loc.equals(cmd.target)) {
-            int badSpotsMax = 30;
+            int score = 30;
             for (Direction dir: c.fourDirs) {
                 if (uc.isOutOfMap(c.loc.add(dir.dx * 5, dir.dy * 5))) {
-                    badSpotsMax -= 5;
+                    score -= 5;
                 }
             }
             if (uc.getAstronautInfo().getOxygen() < 5) {
-                badSpotsMax -= 5;
+                score -= 5;
             }
-            int status = uc.senseObjects(MapObject.WATER, c.visionRange).length > badSpotsMax ? dc.SURVEY_BAD : dc.SURVEY_GOOD;
+
+            if (uc.senseObjects(MapObject.HOT_ZONE, c.visionRange).length >= 3) {
+                score += 15;
+            }
+
+            if (uc.senseObjects(MapObject.HOT_ZONE, c.visionRange).length >= 7) {
+                score += 15;
+            }
+
+            score -= uc.senseObjects(MapObject.WATER, c.visionRange).length;
+
+            int status = dc.SURVEY_BAD;
+
+            if (score >= 0) {
+                status = dc.SURVEY_GOOD;
+            }
+            if (score > 35) {
+                status = dc.SURVEY_EXCELLENT;
+            }
+
             rdb.sendSurveyCompleteMsg(new SurveyComplete(cmd.target, status, cmd.expansionId));
             return;
         } else if (search.calculateBestDirection(cmd.target, c.loc.directionTo(cmd.target).opposite(), 12) == null) {

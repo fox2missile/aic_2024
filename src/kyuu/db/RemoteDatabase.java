@@ -206,13 +206,16 @@ public class RemoteDatabase extends Database {
                                     (fullMsg & dc.MASKER_LOC_Y) >> dc.MASKER_LOC_Y_SHIFT),
                             fullMsg & dc.SYMMETRIC_SEEKER_COMPLETE_STATUS_MASKER);
                 } // no payload
-            } else if (msgId == dc.MSG_ID_SURVEY_COMPLETE_GOOD || msgId == dc.MSG_ID_SURVEY_COMPLETE_BAD || msgId == dc.MSG_ID_SURVEY_FAILED) {
+            } else if (msgId == dc.MSG_ID_SURVEY_COMPLETE_GOOD || msgId == dc.MSG_ID_SURVEY_COMPLETE_BAD
+                    || msgId == dc.MSG_ID_SURVEY_FAILED || msgId == dc.MSG_ID_SURVEY_COMPLETE_EXCELLENT) {
                 if (subscribeSurveyComplete) {
                     int status = dc.SURVEY_GOOD;
                     if (msgId == dc.MSG_ID_SURVEY_COMPLETE_BAD) {
                         status = dc.SURVEY_BAD;
                     } else if (msgId == dc.MSG_ID_SURVEY_FAILED) {
                         status = dc.SURVEY_NONE;
+                    } else if (msgId == dc.MSG_ID_SURVEY_COMPLETE_EXCELLENT) {
+                        status = dc.SURVEY_EXCELLENT;
                     }
                     int remoteExpansionId = fullMsg & dc.SURVEY_COMPLETE_EXPANSION_ID_MASKER;
                     int localExpansionId = convertToLocalExpansionId(remoteExpansionId);
@@ -226,6 +229,9 @@ public class RemoteDatabase extends Database {
                             if (Vector2D.chebysevDistance(expansionSites[localExpansionId][i], s.target) < 3) {
                                 c.logger.log("Received survey status: %s - %s", s.target, s.status == dc.SURVEY_GOOD ? "good" : "bad");
                                 surveyorStates[localExpansionId][i] = s.status;
+//                                if (s.status == dc.SURVEY_GOOD) {
+//                                    expansionStates[localExpansionId][i] = dc.EXPANSION_STATE_ESTABLISHED;
+//                                }
                                 return s;
                             }
                         }
@@ -337,8 +343,14 @@ public class RemoteDatabase extends Database {
 
     public void sendSurveyCompleteMsg(SurveyComplete msg) {
         c.logger.log("survey: %s", msg.status == dc.SURVEY_GOOD ? "good" : "bad");
-        int encoded = msg.status == dc.SURVEY_GOOD ? dc.MSG_ID_MASK_SURVEY_COMPLETE_GOOD :
-                      (msg.status == dc.SURVEY_BAD ? dc.MSG_ID_MASK_SURVEY_COMPLETE_BAD : dc.MSG_ID_MASK_SURVEY_FAILED);
+        int encoded = dc.MSG_ID_MASK_SURVEY_FAILED;
+        if (msg.status == dc.SURVEY_BAD) {
+            encoded = dc.MSG_ID_MASK_SURVEY_COMPLETE_BAD;
+        } else if (msg.status == dc.SURVEY_GOOD) {
+            encoded = dc.MSG_ID_MASK_SURVEY_COMPLETE_GOOD;
+        } else if (msg.status == dc.SURVEY_EXCELLENT) {
+            encoded = dc.MSG_ID_MASK_SURVEY_COMPLETE_EXCELLENT;
+        }
         encoded |= (msg.target.x << dc.MASKER_LOC_X_SHIFT);
         encoded |= (msg.target.y << dc.MASKER_LOC_Y_SHIFT);
         encoded |= msg.expansionId;
@@ -398,6 +410,8 @@ public class RemoteDatabase extends Database {
             return dc.MSG_ID_SURVEY_COMPLETE_BAD;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_SURVEY_FAILED) {
             return dc.MSG_ID_SURVEY_FAILED;
+        } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_SURVEY_COMPLETE_EXCELLENT) {
+            return dc.MSG_ID_SURVEY_COMPLETE_EXCELLENT;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_SYMMETRIC_SEEKER_COMPLETE) {
             return dc.MSG_ID_SYMMETRIC_SEEKER_COMPLETE;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_ENEMY_HQ_DESTROYED) {

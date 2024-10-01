@@ -123,7 +123,7 @@ public class HeadquarterTask extends Task {
         }
         int nearestEnemyHqIdx = Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize);
         Location targetHq = rdb.enemyHq[nearestEnemyHqIdx];
-        boolean canBoom = uc.getStructureInfo().getCarePackagesOfType(CarePackage.REINFORCED_SUIT) > maxReinforcedSuits;
+        boolean canBoom = uc.getStructureInfo().getCarePackagesOfType(CarePackage.REINFORCED_SUIT) >= maxReinforcedSuits;
         int singleAtkCost = (Vector2D.manhattanDistance(c.loc, targetHq) * 5 / 4) + 32;
         canBoom = canBoom && uc.getStructureInfo().getOxygen() >= singleAtkCost * 8;
 
