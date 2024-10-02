@@ -55,8 +55,8 @@ public class ExpansionTask extends Task {
 
             for (int i = 0; i < c.allDirs.length; i++) {
                 // todo: allow more expansion dir
-//                if (generalDir != null && c.allDirs[i] != generalDir && c.allDirs[i] != generalDir.rotateRight() && c.allDirs[i] != generalDir.rotateLeft()) {
-                if (generalDir != null && c.allDirs[i] != generalDir) {
+                if (generalDir != null && c.allDirs[i] != generalDir && c.allDirs[i] != generalDir.rotateRight() && c.allDirs[i] != generalDir.rotateLeft()) {
+//                if (generalDir != null && c.allDirs[i] != generalDir) {
                     rdb.surveyorStates[id][i] = dc.SURVEY_BAD;
                     continue;
                 }

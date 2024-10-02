@@ -270,7 +270,7 @@ public class RemoteDatabase extends Database {
                                 continue;
                             }
                             if (Vector2D.chebysevDistance(expansionSites[expansionId][i], s.target) < 3) {
-                                c.logger.log("Received survey status: %s - %s", s.target, s.status == dc.SURVEY_GOOD ? "good" : "bad");
+                                c.logger.log("Received survey status: %s - %s", s.target, s.status);
                                 surveyorStates[expansionId][i] = s.status;
                                 return s;
                             }
