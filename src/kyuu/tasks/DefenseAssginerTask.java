@@ -88,7 +88,7 @@ public class DefenseAssginerTask extends Task {
 
     public void assignDefenders(AlertMessage alert) {
         c.logger.log("trying to assign defenders from alert message..");
-        if (Vector2D.chebysevDistance(c.loc, alert.target) > 15) {
+        if (Vector2D.chebysevDistance(c.loc, alert.target) > 35) {
             return;
         }
         int nearestHqIdx = Vector2D.getNearest(alert.target, rdb.hqLocs, rdb.hqCount);
