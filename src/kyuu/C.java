@@ -134,6 +134,13 @@ public class C {
         return obj == MapObject.WATER || obj == MapObject.DOME || obj == MapObject.HYPERJUMP;
     }
 
+    public int remainingSteps() {
+        if (uc.getAstronautInfo().getCarePackage() == CarePackage.SURVIVAL_KIT) {
+            return (int)Math.ceil(uc.getAstronautInfo().getOxygen() * 0.75 * 2);
+        }
+        return (int)Math.ceil(uc.getAstronautInfo().getOxygen() * 0.75);
+    }
+
     C(UnitController unitController) {
         for (int i = 0; i < directionsNorthCcw.length; i++) {
             Direction first = directionsNorthCcw[i];

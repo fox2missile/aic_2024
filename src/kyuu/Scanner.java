@@ -59,6 +59,8 @@ public class Scanner {
             int strength = 1;
             if (enemy.getCarePackage() == CarePackage.REINFORCED_SUIT) {
                 strength = c.bitCount((int)(Math.ceil(enemy.getOxygen())));
+            } else if (enemy.getOxygen() < 30) {
+                continue;
             }
             totalStrength += strength;
             sumX += enemy.getLocation().x * strength;

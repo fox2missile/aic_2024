@@ -18,6 +18,8 @@ public class LocalDatabase extends Database {
     public int[] assignedThisRound;
     public int assignedThisRoundSize;
 
+    public int minReserveOxygen;
+
 
     public LocalDatabase(C c) {
         super(c);

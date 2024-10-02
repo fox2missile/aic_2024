@@ -28,7 +28,7 @@ public class AstronautTask extends Task {
 //        pathFinder = new NaivePathFinder(c);
         moveTask = new MoveTask(c);
         scanSectorTask = new ScanSectorTask(c);
-        retrievePaxTask = new RetrievePackageTask(c, c.visionRange);
+        retrievePaxTask = new RetrievePackageTask(c);
         rdb.subscribeSeekSymmetryCommand = true;
         rdb.subscribeEnemyHq = true;
         rdb.subscribePackageRetrievalCommand = true;

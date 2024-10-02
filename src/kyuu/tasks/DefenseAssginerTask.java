@@ -33,6 +33,11 @@ public class DefenseAssginerTask extends Task {
             if (!c.s.isReachableDirectly(a.getLocation()) && a.getCarePackage() != CarePackage.REINFORCED_SUIT) {
                 continue;
             }
+
+            if (a.getCarePackage() != CarePackage.REINFORCED_SUIT && a.getOxygen() < Vector2D.chebysevDistance(c.loc, a.getLocation())) {
+                continue;
+            }
+
             if (uc.getStructureInfo().getOxygen() < 11) {
                 c.logger.log("Danger: HQ is threatened but not enough oxygen!");
                 return;

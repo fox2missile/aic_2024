@@ -4,7 +4,6 @@ import aic2024.user.*;
 import kyuu.C;
 import kyuu.Vector2D;
 import kyuu.fast.FastLocIntMap;
-import kyuu.fast.FastLocSet;
 import kyuu.message.*;
 
 public class RemoteDatabase extends Database {
@@ -29,11 +28,10 @@ public class RemoteDatabase extends Database {
     public Location[][] expansionSites;
     public int[][] expansionStates;
 
-    public final int EXPANSION_SIZE = 75;
 
     public int hqIdx;
 
-    private FastLocIntMap knownAlertLocations;
+    private final FastLocIntMap knownAlertLocations;
 
     public RemoteDatabase(C c) {
         super(c);
@@ -43,9 +41,9 @@ public class RemoteDatabase extends Database {
     }
 
     public void initExpansionData() {
-        surveyorStates = new int[EXPANSION_SIZE][c.allDirs.length];
-        expansionSites = new Location[EXPANSION_SIZE][c.allDirs.length];
-        expansionStates = new int[EXPANSION_SIZE][c.allDirs.length];
+        surveyorStates = new int[dc.EXPANSION_SIZE * dc.MAX_HQ][c.allDirs.length];
+        expansionSites = new Location[dc.EXPANSION_SIZE * dc.MAX_HQ][c.allDirs.length];
+        expansionStates = new int[dc.EXPANSION_SIZE * dc.MAX_HQ][c.allDirs.length];
     }
 
     public void sendHqInfo() {
@@ -107,38 +105,62 @@ public class RemoteDatabase extends Database {
         uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
     }
 
-    private int convertToRemoteExpansionId(int localId) {
-        return localId + (hqIdx * EXPANSION_SIZE);
-    }
-
-    private int convertToLocalExpansionId(int remoteId) {
-        int rangeBegin = hqIdx * EXPANSION_SIZE;
-        int rangeEnd = (hqIdx + 1) * EXPANSION_SIZE;
-        if (remoteId >= rangeBegin && remoteId < rangeEnd) {
-            return remoteId - rangeBegin;
-        }
-        // not this hq expansion id
-        return -1;
-    }
-
-
-    public void sendSurveyCommand(int surveyor, Location targetLoc, int expansionId) {
-        c.logger.log("send out surveyor %d to %s", surveyor, targetLoc);
+    public void sendSurveyCommand(int surveyor, Location targetLoc, int expansionId, Location[] sources) {
+        c.logger.log("send out surveyor %d to %s [expansion id: %d]", surveyor, targetLoc, expansionId);
         uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_SURVEY_CMD);
         uc.performAction(ActionType.BROADCAST, null, surveyor);
         uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
         uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
-        uc.performAction(ActionType.BROADCAST, null, convertToRemoteExpansionId(expansionId));
+        uc.performAction(ActionType.BROADCAST, null, expansionId);
+        uc.performAction(ActionType.BROADCAST, null, sources.length);
+        for (Location source : sources) {
+            uc.performAction(ActionType.BROADCAST, null, source.x);
+            uc.performAction(ActionType.BROADCAST, null, source.y);
+        }
+        // padding
+        if (sources.length < dc.MAX_EXPANSION_DEPTH) {
+            for (int i = sources.length; i < dc.MAX_EXPANSION_DEPTH; i++) {
+                // won't be read
+                uc.performAction(ActionType.BROADCAST, null, 0);
+                uc.performAction(ActionType.BROADCAST, null, 0);
+            }
+        }
     }
 
-    public void sendExpansionCommand(int workerId, Location targetLoc, int state, int expansionId) {
-        c.logger.log("send out expansion worker %d to %s", workerId, targetLoc);
+    public void sendExpansionCommand(int workerId, Location targetLoc, int state, int expansionId, Location[] sources, Location possibleNext) {
+        c.logger.log("send out expansion worker %d to %s [expansion id: %d]", workerId, targetLoc, expansionId);
         uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_EXPANSION);
         uc.performAction(ActionType.BROADCAST, null, workerId);
         uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
         uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
         uc.performAction(ActionType.BROADCAST, null, state);
-        uc.performAction(ActionType.BROADCAST, null, convertToRemoteExpansionId(expansionId));
+        uc.performAction(ActionType.BROADCAST, null, expansionId);
+        if (possibleNext != null) {
+            uc.performAction(ActionType.BROADCAST, null, possibleNext.x);
+            uc.performAction(ActionType.BROADCAST, null, possibleNext.y);
+        } else {
+            uc.performAction(ActionType.BROADCAST, null, dc.INVALID_LOCATION.x);
+            uc.performAction(ActionType.BROADCAST, null, dc.INVALID_LOCATION.y);
+        }
+        uc.performAction(ActionType.BROADCAST, null, sources.length);
+        for (Location source : sources) {
+            uc.performAction(ActionType.BROADCAST, null, source.x);
+            uc.performAction(ActionType.BROADCAST, null, source.y);
+        }
+        // padding
+        if (sources.length < dc.MAX_EXPANSION_DEPTH) {
+            for (int i = sources.length; i < dc.MAX_EXPANSION_DEPTH; i++) {
+                // won't be read
+                uc.performAction(ActionType.BROADCAST, null, 0);
+                uc.performAction(ActionType.BROADCAST, null, 0);
+            }
+        }
+    }
+
+    private boolean isSubscribingExpansionId(int id) {
+        int rangeBegin = hqIdx * dc.EXPANSION_SIZE;
+        int rangeEnd = (hqIdx + 1) * dc.EXPANSION_SIZE;
+        return rangeBegin <= id && id < rangeEnd;
     }
 
 
@@ -180,8 +202,15 @@ public class RemoteDatabase extends Database {
             } else if (msgId == dc.MSG_ID_SURVEY_CMD) {
                 if (subscribeSurveyCommand) {
                     if (c.id == uc.pollBroadcast().getMessage()) {
-                        return new SurveyCommand(new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage()),
-                                                uc.pollBroadcast().getMessage());
+                        Location target = new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage());
+                        int expansionId = uc.pollBroadcast().getMessage();
+                        int expansionAncestorSize = uc.pollBroadcast().getMessage();
+                        Location[] expansionAncestors = new Location[expansionAncestorSize];
+                        for (int i = 0; i < expansionAncestorSize; i++) {
+                            expansionAncestors[i] = new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage());
+                        }
+                        uc.eraseBroadcastBuffer(2 * (dc.MAX_EXPANSION_DEPTH - expansionAncestorSize));
+                        return new SurveyCommand(target, expansionId, expansionAncestors);
                     } else {
                         uc.eraseBroadcastBuffer(dc.MSG_SIZE_SURVEY_CMD - 1); // -1 ID
                     }
@@ -191,8 +220,20 @@ public class RemoteDatabase extends Database {
             } else if (msgId == dc.MSG_ID_EXPANSION) {
                 if (subscribeExpansionCommand) {
                     if (c.id == uc.pollBroadcast().getMessage()) {
-                        return new ExpansionCommand(new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage()),
-                                                    uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage());
+                        Location target = new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage());
+                        int state = uc.pollBroadcast().getMessage();
+                        int expansionId = uc.pollBroadcast().getMessage();
+                        Location possibleNext = new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage());
+                        if (possibleNext.equals(dc.INVALID_LOCATION)) {
+                            possibleNext = null;
+                        }
+                        int expansionAncestorSize = uc.pollBroadcast().getMessage();
+                        Location[] expansionAncestors = new Location[expansionAncestorSize];
+                        for (int i = 0; i < expansionAncestorSize; i++) {
+                            expansionAncestors[i] = new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage());
+                        }
+                        uc.eraseBroadcastBuffer(2 * (dc.MAX_EXPANSION_DEPTH - expansionAncestorSize));
+                        return new ExpansionCommand(target, state, expansionId, expansionAncestors, possibleNext);
                     } else {
                         uc.eraseBroadcastBuffer(dc.MSG_SIZE_EXPANSION - 1); // -1 ID
                     }
@@ -217,21 +258,20 @@ public class RemoteDatabase extends Database {
                     } else if (msgId == dc.MSG_ID_SURVEY_COMPLETE_EXCELLENT) {
                         status = dc.SURVEY_EXCELLENT;
                     }
-                    int remoteExpansionId = fullMsg & dc.SURVEY_COMPLETE_EXPANSION_ID_MASKER;
-                    int localExpansionId = convertToLocalExpansionId(remoteExpansionId);
-                    if (localExpansionId != -1 ) {
+                    int expansionId = fullMsg & dc.SURVEY_COMPLETE_EXPANSION_ID_MASKER;
+                    if (isSubscribingExpansionId(expansionId)) {
                         SurveyComplete s = new SurveyComplete(
                                 new Location((fullMsg & dc.MASKER_LOC_X) >> dc.MASKER_LOC_X_SHIFT,
                                         (fullMsg & dc.MASKER_LOC_Y) >> dc.MASKER_LOC_Y_SHIFT),
-                                status, localExpansionId
+                                status, expansionId
                                 );
                         for (int i = 0; i < c.allDirs.length; i++) {
-                            if (Vector2D.chebysevDistance(expansionSites[localExpansionId][i], s.target) < 3) {
+                            if (expansionSites[expansionId][i] == null) {
+                                continue;
+                            }
+                            if (Vector2D.chebysevDistance(expansionSites[expansionId][i], s.target) < 3) {
                                 c.logger.log("Received survey status: %s - %s", s.target, s.status == dc.SURVEY_GOOD ? "good" : "bad");
-                                surveyorStates[localExpansionId][i] = s.status;
-//                                if (s.status == dc.SURVEY_GOOD) {
-//                                    expansionStates[localExpansionId][i] = dc.EXPANSION_STATE_ESTABLISHED;
-//                                }
+                                surveyorStates[expansionId][i] = s.status;
                                 return s;
                             }
                         }
@@ -241,18 +281,20 @@ public class RemoteDatabase extends Database {
                 } // no payload
             } else if (msgId == dc.MSG_ID_EXPANSION_ESTABLISHED) {
                 if (subscribeExpansionEstablished) {
-                    int remoteExpansionId = fullMsg & dc.EXPANSION_ESTABLISHED_EXPANSION_ID_MASKER;
-                    int localExpansionId = convertToLocalExpansionId(remoteExpansionId);
-                    if (localExpansionId != -1) {
+                    int expansionId = fullMsg & dc.EXPANSION_ESTABLISHED_EXPANSION_ID_MASKER;
+                    if (isSubscribingExpansionId(expansionId)) {
                         ExpansionEstablishedMessage ex = new ExpansionEstablishedMessage(
                                 new Location((fullMsg & dc.MASKER_LOC_X) >> dc.MASKER_LOC_X_SHIFT,
                                         (fullMsg & dc.MASKER_LOC_Y) >> dc.MASKER_LOC_Y_SHIFT),
-                                localExpansionId
+                                expansionId
                                 );
                         for (int i = 0; i < c.allDirs.length; i++) {
-                            if (Vector2D.chebysevDistance(expansionSites[localExpansionId][i], ex.target) < 3) {
+                            if (expansionSites[expansionId][i] == null) {
+                                continue;
+                            }
+                            if (Vector2D.chebysevDistance(expansionSites[expansionId][i], ex.target) < 3) {
                                 c.logger.log("Expansion established: %s", ex.target);
-                                expansionStates[localExpansionId][i] = dc.EXPANSION_STATE_ESTABLISHED;
+                                expansionStates[expansionId][i] = dc.EXPANSION_STATE_ESTABLISHED;
                                 return ex;
                             }
                         }
@@ -302,6 +344,7 @@ public class RemoteDatabase extends Database {
             }
             if (enemyHq[i].equals(loc)) {
                 found = true;
+                break;
             }
         }
         if (!found) {
@@ -342,13 +385,15 @@ public class RemoteDatabase extends Database {
     }
 
     public void sendSurveyCompleteMsg(SurveyComplete msg) {
-        c.logger.log("survey: %s", msg.status == dc.SURVEY_GOOD ? "good" : "bad");
         int encoded = dc.MSG_ID_MASK_SURVEY_FAILED;
         if (msg.status == dc.SURVEY_BAD) {
+            c.logger.log("survey: bad");
             encoded = dc.MSG_ID_MASK_SURVEY_COMPLETE_BAD;
         } else if (msg.status == dc.SURVEY_GOOD) {
+            c.logger.log("survey: good");
             encoded = dc.MSG_ID_MASK_SURVEY_COMPLETE_GOOD;
         } else if (msg.status == dc.SURVEY_EXCELLENT) {
+            c.logger.log("survey: excellent");
             encoded = dc.MSG_ID_MASK_SURVEY_COMPLETE_EXCELLENT;
         }
         encoded |= (msg.target.x << dc.MASKER_LOC_X_SHIFT);
