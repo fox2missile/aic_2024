@@ -4,6 +4,7 @@ import aic2024.user.*;
 import kyuu.C;
 import kyuu.Vector2D;
 import kyuu.fast.FastLocIntMap;
+import kyuu.fast.FastLocSet;
 import kyuu.message.*;
 
 public class RemoteDatabase extends Database {
@@ -22,6 +23,9 @@ public class RemoteDatabase extends Database {
     public boolean subscribePackageRetrievalCommand = false;
     public boolean subscribeSurveyComplete = false;
     public boolean subscribeExpansionEstablished = false;
+    public boolean subscribeBuildDomeCommand = false;
+    public boolean subscribeDomeBuilt = false;
+    public boolean subscribeDomeDestroyed = false;
     public boolean subscribeAlert = true;
 
     public int[][] surveyorStates;
@@ -29,15 +33,24 @@ public class RemoteDatabase extends Database {
     public int[][] expansionStates;
 
 
+
     public int hqIdx;
 
     private final FastLocIntMap knownAlertLocations;
+    private final FastLocSet dangerSectors;
+    public int alertCount;
 
     public RemoteDatabase(C c) {
         super(c);
         enemyHq = new Location[3];
         hqIdx = -1;
         knownAlertLocations = new FastLocIntMap();
+        dangerSectors = new FastLocSet();
+        alertCount = 0;
+    }
+
+    public boolean isKnownDangerousLocation(Location loc) {
+        return dangerSectors.contains(c.getSector(loc));
     }
 
     public void initExpansionData() {
@@ -105,6 +118,20 @@ public class RemoteDatabase extends Database {
         uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
     }
 
+    public void sendBuildDomeCommand(int builderId, Location targetLoc) {
+        c.logger.log("Sending builder %d to build dome at %s", builderId, targetLoc);
+        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_BUILD_DOME_CMD);
+        uc.performAction(ActionType.BROADCAST, null, builderId);
+        uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
+        uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
+    }
+
+    public void sendDomeInquiry(Location targetLoc) {
+        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_INQUIRE_DOME);
+        uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
+        uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
+    }
+
     public void sendSurveyCommand(int surveyor, Location targetLoc, int expansionId, Location[] sources) {
         c.logger.log("send out surveyor %d to %s [expansion id: %d]", surveyor, targetLoc, expansionId);
         uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_SURVEY_CMD);
@@ -163,6 +190,10 @@ public class RemoteDatabase extends Database {
         return rangeBegin <= id && id < rangeEnd;
     }
 
+    private int getStructureExpansionId() {
+        return hqIdx * dc.EXPANSION_SIZE;
+    }
+
 
     public Message retrieveNextMessage() {
         BroadcastInfo b = uc.pollBroadcast();
@@ -198,6 +229,23 @@ public class RemoteDatabase extends Database {
                     }
                 } else {
                     uc.eraseBroadcastBuffer(dc.MSG_SIZE_DEFENSE_CMD); // ID wasn't read
+                }
+            } else if (msgId == dc.MSG_ID_BUILD_DOME_CMD) {
+                if (subscribeBuildDomeCommand) {
+                    if (c.id == uc.pollBroadcast().getMessage()) {
+                        return new BuildDomeCommand(new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage()));
+                    } else {
+                        uc.eraseBroadcastBuffer(dc.MSG_SIZE_BUILD_DOME_CMD - 1); // -1 ID
+                    }
+                } else {
+                    uc.eraseBroadcastBuffer(dc.MSG_SIZE_BUILD_DOME_CMD); // ID wasn't read
+                }
+            } else if (msgId == dc.MSG_ID_INQUIRE_DOME) {
+                if (subscribeBuildDomeCommand) {
+                    Location inquiryLoc = new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage());
+                    if (uc.canSenseLocation(inquiryLoc) && uc.isDomed(inquiryLoc)) {
+                        return new InquireDomeMessage(inquiryLoc);
+                    }
                 }
             } else if (msgId == dc.MSG_ID_SURVEY_CMD) {
                 if (subscribeSurveyCommand) {
@@ -310,13 +358,56 @@ public class RemoteDatabase extends Database {
                     // skip payload
                     uc.eraseBroadcastBuffer(dc.MSG_SIZE_ENEMY_HQ);
                 }
+            } else if (msgId == dc.MSG_ID_DOME_BUILT) {
+                if (subscribeDomeBuilt) {
+                    DomeBuiltNotification dome = new DomeBuiltNotification(new Location((fullMsg & dc.MASKER_LOC_X) >> dc.MASKER_LOC_X_SHIFT,
+                            (fullMsg & dc.MASKER_LOC_Y) >> dc.MASKER_LOC_Y_SHIFT));
+                    if (uc.isStructure()) {
+                        int expansionId = getStructureExpansionId();
+                        for (int i = 0; i < c.allDirs.length; i++) {
+                            if (expansionSites[expansionId][i] == null) {
+                                continue;
+                            }
+                            if (Vector2D.chebysevDistance(expansionSites[expansionId][i], dome.target) < 3) {
+                                c.logger.log("Dome built: %s", dome.target);
+                                expansionStates[expansionId][i] = dc.EXPANSION_STATE_HAS_DOME;
+                                return dome;
+                            }
+                        }
+                    } else {
+                        if (Vector2D.chebysevDistance(c.loc, dome.target) < 3) {
+                            c.logger.log("Dome built: %s", dome.target);
+                            return dome;
+                        }
+                    }
+
+                } // no payload
+            }  else if (msgId == dc.MSG_ID_DOME_DESTROYED) {
+                if (subscribeDomeDestroyed) {
+                    DomeDestroyedNotification dome = new DomeDestroyedNotification(new Location((fullMsg & dc.MASKER_LOC_X) >> dc.MASKER_LOC_X_SHIFT,
+                            (fullMsg & dc.MASKER_LOC_Y) >> dc.MASKER_LOC_Y_SHIFT));
+                    int expansionId = getStructureExpansionId();
+                    for (int i = 0; i < c.allDirs.length; i++) {
+                        if (expansionSites[expansionId][i] == null) {
+                            continue;
+                        }
+                        if (Vector2D.chebysevDistance(expansionSites[expansionId][i], dome.target) < 3) {
+                            c.logger.log("Dome destroyed: %s", dome.target);
+                            expansionStates[expansionId][i] = dc.EXPANSION_STATE_ESTABLISHED;
+                            return dome;
+                        }
+                    }
+
+                } // no payload
             } else if (msgId == dc.MSG_ID_ALERT) {
                 if (subscribeAlert) {
                     Location loc = new Location((fullMsg & dc.MASKER_LOC_X) >> dc.MASKER_LOC_X_SHIFT,
                             (fullMsg & dc.MASKER_LOC_Y) >> dc.MASKER_LOC_Y_SHIFT);
                     int strength = fullMsg & dc.ALERT_STRENGTH_MASKER;
                     AlertMessage msg = new AlertMessage(loc, strength);
+                    dangerSectors.add(c.getSector(msg.target));
                     knownAlertLocations.add(msg.target, uc.getRound());
+                    alertCount++;
                     return msg;
                 } // no payload
             } else if (msgId == dc.MSG_ID_ENEMY_HQ_DESTROYED) {
@@ -411,6 +502,22 @@ public class RemoteDatabase extends Database {
         uc.performAction(ActionType.BROADCAST, null, encoded);
     }
 
+    public void sendDomeBuiltMsg(DomeBuiltNotification msg) {
+        c.logger.log("witnessed dome built: %s", msg.target);
+        int encoded = dc.MSG_ID_MASK_DOME_BUILT;
+        encoded |= (msg.target.x << dc.MASKER_LOC_X_SHIFT);
+        encoded |= (msg.target.y << dc.MASKER_LOC_Y_SHIFT);
+        uc.performAction(ActionType.BROADCAST, null, encoded);
+    }
+
+    public void sendDomeDestroyedMsg(DomeDestroyedNotification msg) {
+        c.logger.log("witnessed dome destroyed: %s", msg.target);
+        int encoded = dc.MSG_ID_MASK_DOME_DESTROYED;
+        encoded |= (msg.target.x << dc.MASKER_LOC_X_SHIFT);
+        encoded |= (msg.target.y << dc.MASKER_LOC_Y_SHIFT);
+        uc.performAction(ActionType.BROADCAST, null, encoded);
+    }
+
     public void trySendAlert(AlertMessage msg) {
         cleanAlert();
         for (Location loc: knownAlertLocations.getKeys()) {
@@ -449,6 +556,10 @@ public class RemoteDatabase extends Database {
             return dc.MSG_ID_SURVEY_CMD;
         } else if (broadcasted == dc.MSG_ID_EXPANSION) {
             return dc.MSG_ID_EXPANSION;
+        } else if (broadcasted == dc.MSG_ID_BUILD_DOME_CMD) {
+            return dc.MSG_ID_BUILD_DOME_CMD;
+        } else if (broadcasted == dc.MSG_ID_INQUIRE_DOME) {
+            return dc.MSG_ID_INQUIRE_DOME;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_SURVEY_COMPLETE_GOOD) {
             return dc.MSG_ID_SURVEY_COMPLETE_GOOD;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_SURVEY_COMPLETE_BAD) {
@@ -465,6 +576,10 @@ public class RemoteDatabase extends Database {
             return dc.MSG_ID_EXPANSION_ESTABLISHED;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_ALERT) {
             return dc.MSG_ID_ALERT;
+        } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_DOME_BUILT) {
+            return dc.MSG_ID_DOME_BUILT;
+        } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_DOME_DESTROYED) {
+            return dc.MSG_ID_DOME_DESTROYED;
         }
         return 0;
     }

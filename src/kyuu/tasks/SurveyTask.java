@@ -44,7 +44,7 @@ public class SurveyTask extends Task {
         c.s.trySendAlert();
         int dist = Vector2D.manhattanDistance(c.loc, currentTarget);
         c.destination = currentTarget;
-        if (uc.getAstronautInfo().getOxygen() < 2) {
+        if (c.remainingSteps() < 2) {
             rdb.sendSurveyCompleteMsg(new SurveyComplete(cmd.target, dc.SURVEY_BAD, cmd.expansionId));
             return;
         }
@@ -88,7 +88,7 @@ public class SurveyTask extends Task {
                     score -= 5;
                 }
             }
-            if (uc.getAstronautInfo().getOxygen() < 5) {
+            if (c.remainingSteps() < 5) {
                 score -= 5;
             }
 

@@ -42,6 +42,8 @@ public class HeadquarterTask extends Task {
         rdb.subscribeSeekSymmetryCommand = true;
         rdb.subscribeSurveyComplete = true;
         rdb.subscribeExpansionEstablished = true;
+        rdb.subscribeDomeBuilt = true;
+        rdb.subscribeDomeDestroyed = true;
         rdb.initExpansionData();
         packageSearch = ParallelSearch.getDefaultSearch(c);
         packageAssignerTask = new PackageAssignerTask(c);

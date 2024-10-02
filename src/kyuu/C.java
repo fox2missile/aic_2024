@@ -135,10 +135,15 @@ public class C {
     }
 
     public int remainingSteps() {
+        int multiplier = 1;
         if (uc.getAstronautInfo().getCarePackage() == CarePackage.SURVIVAL_KIT) {
-            return (int)Math.ceil(uc.getAstronautInfo().getOxygen() * 0.75 * 2);
+            multiplier *= 2;
         }
-        return (int)Math.ceil(uc.getAstronautInfo().getOxygen() * 0.75);
+        if (uc.isDomed(loc)) {
+            multiplier *= 2;
+        }
+
+        return (int)Math.ceil(uc.getAstronautInfo().getOxygen() * 0.75 * multiplier);
     }
 
     C(UnitController unitController) {

@@ -21,4 +21,10 @@ public abstract class Task {
         this.rdb = c.rdb;
     }
     public abstract void run();
+
+    public void secondRun() {
+        // execute after move
+        // override for special cases
+        run();
+    }
 }
