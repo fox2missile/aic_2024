@@ -121,12 +121,12 @@ public class ExpansionTask extends Task {
 
     @Override
     public void run() {
-        int minOxygen = Math.max(ldb.minReserveOxygen, 200);
+        int minOxygen = Math.max(ldb.minReserveOxygen, 90);
         if (uc.getStructureInfo().getOxygen() < minOxygen) {
             return;
         }
         expansionCooldown = EXPANSION_COOLDOWN_NORMAL;
-        if (uc.getStructureInfo().getOxygen() > minOxygen + 300) {
+        if (uc.getStructureInfo().getOxygen() > minOxygen + 410) {
             expansionCooldown = EXPANSION_COOLDOWN_EXTREME;
         }
         if (uc.senseAstronauts(c.visionRange, c.team).length > 10) {
