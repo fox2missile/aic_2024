@@ -164,10 +164,12 @@ public class AstronautTask extends Task {
     }
 
     private void handleDefense() {
-        int nearestEnemyHqIdx = Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize);
-        Location nearestEnemyHq = rdb.enemyHq[nearestEnemyHqIdx];
-        while (c.loc.distanceSquared(nearestEnemyHq) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(nearestEnemyHq), 1)) {
-            uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(nearestEnemyHq), 1);
+        if (rdb.enemyHqSize > 0) {
+            int nearestEnemyHqIdx = Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize);
+            Location nearestEnemyHq = rdb.enemyHq[nearestEnemyHqIdx];
+            while (c.loc.distanceSquared(nearestEnemyHq) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(nearestEnemyHq), 1)) {
+                uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(nearestEnemyHq), 1);
+            }
         }
 
         // attack anyone nearby
