@@ -44,6 +44,7 @@ public class HeadquarterTask extends Task {
         rdb.subscribeExpansionEstablished = true;
         rdb.subscribeDomeBuilt = true;
         rdb.subscribeDomeDestroyed = true;
+        rdb.subscribeExpansionMissedMsg = true;
         rdb.initExpansionData();
         packageSearch = ParallelSearch.getDefaultSearch(c);
         packageAssignerTask = new PackageAssignerTask(c);

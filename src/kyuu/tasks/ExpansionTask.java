@@ -11,7 +11,7 @@ public class ExpansionTask extends Task {
 
     final int EXPANSION_COOLDOWN_SLOW = 20;
     final int EXPANSION_COOLDOWN_NORMAL = 10;
-    final int EXPANSION_COOLDOWN_EXTREME = 3;
+    final int EXPANSION_COOLDOWN_EXTREME = 5;
 
     class Expansion {
         int id;
@@ -55,7 +55,8 @@ public class ExpansionTask extends Task {
 
             for (int i = 0; i < c.allDirs.length; i++) {
                 // todo: allow more expansion dir
-                if (generalDir != null && c.allDirs[i] != generalDir && c.allDirs[i] != generalDir.rotateRight() && c.allDirs[i] != generalDir.rotateLeft()) {
+                if (generalDir != null && c.allDirs[i] != generalDir && c.allDirs[i] != generalDir.rotateRight() && c.allDirs[i] != generalDir.rotateLeft() && c.allDirs[i] != generalDir.rotateLeft().rotateLeft() && c.allDirs[i] != generalDir.rotateRight().rotateRight()) {
+//                if (generalDir != null && c.allDirs[i] != generalDir && c.allDirs[i] != generalDir.rotateRight() && c.allDirs[i] != generalDir.rotateLeft()) {
 //                if (generalDir != null && c.allDirs[i] != generalDir) {
                     rdb.surveyorStates[id][i] = dc.SURVEY_BAD;
                     rdb.lastBadSurvey[id][i] = -1;
@@ -67,17 +68,25 @@ public class ExpansionTask extends Task {
                     rdb.surveyorStates[id][i] = dc.SURVEY_BAD;
                     rdb.lastBadSurvey[id][i] = -1;
                 }
-                if (uc.isOutOfMap(rdb.expansionSites[id][i]) && parent != null) {
+
+                int mapMagnitude = Math.max(uc.getMapWidth(), uc.getMapHeight());
+                boolean parentCheck = parent != null;
+                if (mapMagnitude > 35) {
+                    parentCheck = true;
+                }
+
+                if (uc.isOutOfMap(rdb.expansionSites[id][i]) && parentCheck) {
                     boolean saved = false;
                     for (int j = 0; j < 3; j++) {
                         rdb.expansionSites[id][i] = expansionLoc.add(dir.dx * (10 - j), dir.dy * (10 - j));
-                        if (!uc.isOutOfMap(rdb.expansionSites[id][i])) {
+                        if (!uc.isOutOfMap(rdb.expansionSites[id][i]) && !(uc.canSenseLocation(rdb.expansionSites[id][i]) && c.isObstacle(uc.senseObjectAtLocation(rdb.expansionSites[id][i])))) {
                             saved = true;
                             break;
                         }
                     }
                     if (saved) {
                         rdb.surveyorStates[id][i] = dc.SURVEY_NONE;
+                        rdb.lastBadSurvey[id][i] = 0;
                     }
                 }
 
@@ -323,7 +332,8 @@ public class ExpansionTask extends Task {
             return;
         }
         ex.expansionWorkers[i] = 0;
-        if (ex.expansionStart[i] != 0 && uc.getRound() - ex.expansionStart[i] < expansionCooldown) {
+        int adjustedExpansionCooldown = expansionCooldown * rdb.expansionMissed[ex.id][i];
+        if (ex.expansionStart[i] != 0 && uc.getRound() - ex.expansionStart[i] < adjustedExpansionCooldown) {
             return;
         }
 
@@ -448,7 +458,7 @@ public class ExpansionTask extends Task {
         int buildDir = -1;
         for (int i = 0; i < c.allDirs.length; i++) {
             Location target = rdb.expansionSites[rootExpansion.id][i];
-            if (target.x - 5 < 0 || target.x + 5 >= uc.getMapWidth() || target.y - 5 < 0 || target.y + 5 >= uc.getMapHeight()) {
+            if (target.x - 2 < 0 || target.x + 2 >= uc.getMapWidth() || target.y - 2 < 0 || target.y + 2 >= uc.getMapHeight()) {
                 continue;
             }
             if (rdb.expansionStates[rootExpansion.id][i] < dc.EXPANSION_STATE_BUILDING_DOME
@@ -461,7 +471,7 @@ public class ExpansionTask extends Task {
         if (buildDir == -1) {
             for (int i = 0; i < c.allDirs.length; i++) {
                 Location target = rdb.expansionSites[rootExpansion.id][i];
-                if (target.x - 5 < 0 || target.x + 5 >= uc.getMapWidth() || target.y - 5 < 0 || target.y + 5 >= uc.getMapHeight()) {
+                if (target.x - 2 < 0 || target.x + 2 >= uc.getMapWidth() || target.y - 2 < 0 || target.y + 2 >= uc.getMapHeight()) {
                     continue;
                 }
                 if (rdb.expansionStates[rootExpansion.id][i] < dc.EXPANSION_STATE_BUILDING_DOME

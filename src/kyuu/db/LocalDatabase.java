@@ -26,6 +26,7 @@ public class LocalDatabase extends Database {
         this.sectorStatusMap = new FastLocIntMap();
         this.assignedThisRound = new int[5];
         this.assignedThisRoundSize = 0;
+        this.pendingExploreStack = new FastLocStack(20);
     }
 
     public void resetAssignedThisRound() {

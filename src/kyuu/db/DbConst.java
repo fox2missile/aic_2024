@@ -78,6 +78,7 @@ public class DbConst {
     public final int SURVEY_EXCELLENT = 3;
     public final int SURVEY_COMPLETE_EXPANSION_ID_MASKER = 0x000000FF;
     public final int EXPANSION_ESTABLISHED_EXPANSION_ID_MASKER = 0x000000FF;
+    public final int EXPANSION_MISSED_EXPANSION_ID_MASKER = 0x000000FF;
     public final int ALERT_STRENGTH_MASKER = 0x000000FF;
 
 
@@ -91,6 +92,7 @@ public class DbConst {
     public final int MSG_ID_MASK_ALERT = 0x08000000;
     public final int MSG_ID_MASK_DOME_BUILT = 0x09000000;
     public final int MSG_ID_MASK_DOME_DESTROYED = 0x0A000000;
+    public final int MSG_ID_MASK_EXPANSION_MISSED = 0x0B000000;
 
     // common maskers
     public final int MASKER_LOC_X = 0x00FF0000;
@@ -120,5 +122,6 @@ public class DbConst {
     public final int MSG_ID_INQUIRE_DOME = MSG_ID_BEGIN - 17;
     public final int MSG_ID_DOME_BUILT = MSG_ID_BEGIN - 18;
     public final int MSG_ID_DOME_DESTROYED = MSG_ID_BEGIN - 19;
+    public final int MSG_ID_EXPANSION_MISSED = MSG_ID_BEGIN - 20;
 
 }
