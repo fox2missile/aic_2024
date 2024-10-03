@@ -58,23 +58,39 @@ public class ExpansionTask extends Task {
                 if (generalDir != null && c.allDirs[i] != generalDir && c.allDirs[i] != generalDir.rotateRight() && c.allDirs[i] != generalDir.rotateLeft()) {
 //                if (generalDir != null && c.allDirs[i] != generalDir) {
                     rdb.surveyorStates[id][i] = dc.SURVEY_BAD;
+                    rdb.lastBadSurvey[id][i] = -1;
                     continue;
                 }
                 Direction dir = c.allDirs[i];;
                 rdb.expansionSites[id][i] = expansionLoc.add(dir.dx * 10, dir.dy * 10);
                 if (uc.isOutOfMap(rdb.expansionSites[id][i])) {
+                    rdb.surveyorStates[id][i] = dc.SURVEY_BAD;
+                    rdb.lastBadSurvey[id][i] = -1;
+                }
+                if (uc.isOutOfMap(rdb.expansionSites[id][i]) && parent != null) {
                     boolean saved = false;
                     for (int j = 0; j < 3; j++) {
-                        rdb.expansionSites[id][i] = c.loc.add(dir.dx * (10 - j), dir.dy * (10 - j));
+                        rdb.expansionSites[id][i] = expansionLoc.add(dir.dx * (10 - j), dir.dy * (10 - j));
                         if (!uc.isOutOfMap(rdb.expansionSites[id][i])) {
                             saved = true;
                             break;
                         }
                     }
-                    if (!saved) {
-                        rdb.surveyorStates[id][i] = dc.SURVEY_BAD;
+                    if (saved) {
+                        rdb.surveyorStates[id][i] = dc.SURVEY_NONE;
                     }
                 }
+
+                for (int h = 0; h < rdb.hqCount; h++) {
+                    if (rdb.hqLocs[h].equals(c.loc)) {
+                        continue;
+                    }
+                    if (Vector2D.chebysevDistance(rdb.hqLocs[h],rdb.expansionSites[id][i]) < 10) {
+                        rdb.surveyorStates[id][i] = dc.SURVEY_BAD;
+                        rdb.lastBadSurvey[id][i] = -1;
+                    }
+                }
+
             }
 
             if (depth == 0) {
@@ -134,6 +150,8 @@ public class ExpansionTask extends Task {
             expansionCooldown = EXPANSION_COOLDOWN_SLOW;
         }
 
+        eliminateSurveyLocs();
+
         sendOutSurveyors();
 
         sendExpansionWorkers();
@@ -141,6 +159,53 @@ public class ExpansionTask extends Task {
         deepenExpansion();
 
         buildDome();
+    }
+
+    private void eliminateSurveyLocs() {
+        if (rdb.enemyHqSize == 0) {
+            return;
+        }
+
+        // root survey
+        for (int i = 0; i < c.allDirs.length; i++) {
+//            boolean nearEnemyHq = false;
+            for (int h = 0; h < rdb.enemyHqSize; h++) {
+                if (rdb.expansionSites[rootExpansion.id][i] == null) {
+                    continue;
+                }
+                if (Vector2D.chebysevDistance(rdb.expansionSites[rootExpansion.id][i], rdb.enemyHq[h]) < 10) {
+                    rdb.surveyorStates[rootExpansion.id][i] = dc.SURVEY_BAD;
+                    rdb.lastBadSurvey[rootExpansion.id][i] = uc.getRound();
+//                    nearEnemyHq = true;
+                    break;
+                }
+            }
+//            if (!nearEnemyHq && rdb.surveyorStates[rootExpansion.id][i] == dc.SURVEY_BAD && rdb.lastBadSurvey[rootExpansion.id][i] != -1) {
+//                rdb.surveyorStates[rootExpansion.id][i] = dc.SURVEY_NONE;
+//            }
+        }
+
+        // depth 1
+        for (int k = 0; k < expansionsDepth1Size; k++) {
+//            boolean nearEnemyHq = false;
+            for (int i = 0; i < c.allDirs.length; i++) {
+                for (int h = 0; h < rdb.enemyHqSize; h++) {
+                    if (rdb.expansionSites[expansionsDepth1[k].id][i] == null) {
+                        continue;
+                    }
+                    if (Vector2D.chebysevDistance(rdb.expansionSites[expansionsDepth1[k].id][i], rdb.enemyHq[h]) < 10) {
+                        rdb.surveyorStates[expansionsDepth1[k].id][i] = dc.SURVEY_BAD;
+                        rdb.lastBadSurvey[expansionsDepth1[k].id][i] = uc.getRound();
+//                        nearEnemyHq = true;
+                        break;
+                    }
+                }
+//                if (!nearEnemyHq && rdb.surveyorStates[expansionsDepth1[k].id][i] == dc.SURVEY_BAD && rdb.lastBadSurvey[expansionsDepth1[k].id][i] != -1) {
+//                    rdb.surveyorStates[expansionsDepth1[k].id][i] = dc.SURVEY_NONE;
+//                }
+            }
+
+        }
     }
 
     private Expansion findChildExpansion(Location expansionTarget) {
@@ -155,8 +220,9 @@ public class ExpansionTask extends Task {
 
     private void sendOutSurveyors() {
         if (isRootSurvey) {
+            rdb.clearBadSurveyHistory(rootExpansion.id, 200);
             for (int i = 0; i < c.allDirs.length; i++) {
-                if (rdb.surveyorStates[0][i] != dc.SURVEY_NONE) {
+                if (rdb.surveyorStates[rootExpansion.id][i] != dc.SURVEY_NONE || rdb.surveyorStates[rootExpansion.id][i] == dc.SURVEY_BAD) {
                     continue;
                 }
                 if (rootExpansion.surveyorStart[i] > 0 && uc.getRound() - rootExpansion.surveyorStart[i] < TIMEOUT_SURVEY) {
@@ -177,7 +243,8 @@ public class ExpansionTask extends Task {
 
         for (int k = 0; k < expansionsDepth1Size; k++) {
             int i = depth1SurveyDir;
-            if (rdb.surveyorStates[expansionsDepth1[k].id][i] != dc.SURVEY_NONE) {
+            rdb.clearBadSurveyHistory(expansionsDepth1[k].id, 100);
+            if (rdb.surveyorStates[expansionsDepth1[k].id][i] != dc.SURVEY_NONE || rdb.surveyorStates[expansionsDepth1[k].id][i] == dc.SURVEY_BAD) {
                 continue;
             }
             if (expansionsDepth1[k].surveyorStart[i] > 0 && uc.getRound() - expansionsDepth1[k].surveyorStart[i] < TIMEOUT_SURVEY * 2) {
