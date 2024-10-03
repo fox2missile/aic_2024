@@ -15,7 +15,7 @@ public class AstronautTask extends Task {
 
     SeekSymmetryCommand currentSymmetryCmd;
     RetrievePackageCommand currentRetPaxCmd;
-    DefenseCommand currentDefCmd;
+    DefenseTask currentDefTask;
     BuildDomeCommand currentBuildDomeCmd;
 
     DomeBuiltNotification latestDomeBuiltNotification;
@@ -54,9 +54,9 @@ public class AstronautTask extends Task {
 
         AstronautInfo[] enemies = uc.senseAstronauts(c.visionRange, c.opponent);
 
-        if (currentSurveyTask == null && currentDefCmd == null && uc.senseStructures(c.visionRange, c.team).length > 0 && enemies.length > 0) {
+        if (currentSurveyTask == null && currentDefTask == null && uc.senseStructures(c.visionRange, c.team).length > 0 && enemies.length > 0) {
             int nearestIdx = Vector2D.getNearest(c.loc, enemies, enemies.length);
-            currentDefCmd = new DefenseCommand(enemies[nearestIdx].getLocation());
+            currentDefTask = new DefenseTask(c, new DefenseCommand(enemies[nearestIdx].getLocation()));
         }
 
         InquireDomeMessage currentInquireDomeMsg = null;
@@ -75,7 +75,7 @@ public class AstronautTask extends Task {
             } else if (msg instanceof RetrievePackageCommand) {
                 currentRetPaxCmd = (RetrievePackageCommand) msg;
             } else if (msg instanceof DefenseCommand) {
-                currentDefCmd = (DefenseCommand) msg;
+                currentDefTask = new DefenseTask(c, (DefenseCommand) msg);
             } else if (msg instanceof SurveyCommand) {
                 currentSurveyTask = new SurveyTask(c, (SurveyCommand) msg);
             } else if (msg instanceof ExpansionCommand) {
@@ -112,10 +112,6 @@ public class AstronautTask extends Task {
         moveTask.run();
         c.destination = null;
 
-        if (c.destination != null) {
-            c.uc.drawLineDebug(c.uc.getLocation(), c.destination, 0, 255, 0);
-        }
-
         if (uc.getRound() != round) {
             return;
         }
@@ -123,7 +119,7 @@ public class AstronautTask extends Task {
         // report dome
         if (currentInquireDomeMsg != null && latestDomeBuiltNotification == null) {
             boolean canReport = uc.getAstronautInfo().getCarePackage() == null;
-            canReport = canReport && currentDefCmd == null;
+            canReport = canReport && currentDefTask == null;
             canReport = canReport && currentRetPaxCmd == null;
             canReport = canReport && currentSurveyTask == null;
             canReport = canReport && currentSymmetryCmd == null;
@@ -136,8 +132,11 @@ public class AstronautTask extends Task {
     }
 
     private void doActions() {
-        if (currentDefCmd != null) {
-            handleDefense();
+        if (currentDefTask != null) {
+            currentDefTask.run();
+            if (currentDefTask.isFinished()) {
+                currentDefTask = null;
+            }
         } else if (currentSymmetryCmd != null) {
             handleSymmetrySeekCmd();
         } else if (currentRetPaxCmd != null) {
@@ -241,30 +240,6 @@ public class AstronautTask extends Task {
             c.destination = currentRetPaxCmd.target;
         }
         return true;
-    }
-
-    private void handleDefense() {
-        if (rdb.enemyHqSize > 0) {
-            int nearestEnemyHqIdx = Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize);
-            Location nearestEnemyHq = rdb.enemyHq[nearestEnemyHqIdx];
-            while (c.loc.distanceSquared(nearestEnemyHq) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(nearestEnemyHq), 1)) {
-                uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(nearestEnemyHq), 1);
-            }
-        }
-
-        // attack anyone nearby
-        AstronautInfo[] enemies = uc.senseAstronauts(c.visionRange, c.team.getOpponent());
-        if (enemies.length > 0) {
-            int nearestIdx = Vector2D.getNearest(c.loc, enemies, enemies.length);
-            c.destination = enemies[nearestIdx].getLocation();
-            if (c.loc.distanceSquared(c.destination) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1)) {
-                uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1);
-            }
-        }
-        c.destination = currentDefCmd.target;
-        if (Vector2D.manhattanDistance(c.loc, currentDefCmd.target) <= 3 && enemies.length == 0) {
-            currentDefCmd = null;
-        }
     }
 
     private boolean attackEnemyHq() {
