@@ -42,6 +42,15 @@ public class Scanner {
         prevLoc = c.loc;
     }
 
+    public void initAvailableEnlistSlot() {
+        c.ldb.availableEnlistSlot = 0;
+        for (Direction dir: c.allDirs) {
+            if (uc.canEnlistAstronaut(dir, 10, null)) {
+                c.ldb.availableEnlistSlot++;
+            }
+        }
+    }
+
     public void trySendAlert() {
         if (!uc.isStructure()) {
             if (uc.senseStructures(c.visionRange, c.team).length > 0) {

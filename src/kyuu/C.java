@@ -10,7 +10,7 @@ import kyuu.log.LoggerStandard;
 
 // C stands for Context
 public class C {
-    public final boolean DEBUG = false;
+    public final boolean DEBUG = false; // todo: surpression strategy
     public UnitController uc;
     public Team team;
     public Team opponent;
@@ -107,6 +107,11 @@ public class C {
     public void move(Direction dir) {
         uc.performAction(ActionType.MOVE, dir, 1);
         loc = uc.getLocation();
+    }
+
+    public void enlistAstronaut(Direction dir, int oxygen, CarePackage pax) {
+        uc.enlistAstronaut(dir, oxygen, pax);
+        ldb.availableEnlistSlot--;
     }
 
     public Location getSectorOrigin(Location sector) {

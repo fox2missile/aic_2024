@@ -19,7 +19,8 @@ public class LocalDatabase extends Database {
     public int assignedThisRoundSize;
 
     public int minReserveOxygen;
-
+    public int minReserveEnlistSlot;
+    public int availableEnlistSlot;
 
     public LocalDatabase(C c) {
         super(c);
@@ -27,6 +28,10 @@ public class LocalDatabase extends Database {
         this.assignedThisRound = new int[5];
         this.assignedThisRoundSize = 0;
         this.pendingExploreStack = new FastLocStack(20);
+    }
+
+    public boolean enlistFullyReserved() {
+        return availableEnlistSlot <= minReserveEnlistSlot || uc.getStructureInfo().getOxygen() <= minReserveOxygen;
     }
 
     public void resetAssignedThisRound() {
