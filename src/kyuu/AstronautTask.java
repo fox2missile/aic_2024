@@ -8,8 +8,6 @@ public class AstronautTask extends Task {
 
     Task moveTask;
 
-//    NaivePathFinder pathFinder;
-
     Task scanSectorTask;
     Task retrievePaxTask;
 
@@ -17,6 +15,7 @@ public class AstronautTask extends Task {
     RetrievePackageCommand currentRetPaxCmd;
     DefenseTask currentDefTask;
     BuildDomeCommand currentBuildDomeCmd;
+    BuildHyperJumpCommand currentBuildHyperJumpCmd;
 
     DomeBuiltNotification latestDomeBuiltNotification;
     Task currentSurveyTask;
@@ -28,7 +27,6 @@ public class AstronautTask extends Task {
 
     public AstronautTask(C c) {
         super(c);
-//        pathFinder = new NaivePathFinder(c);
         moveTask = new MoveTask(c);
         scanSectorTask = new ScanSectorTask(c);
         retrievePaxTask = new RetrievePackageTask(c);
@@ -40,6 +38,7 @@ public class AstronautTask extends Task {
         rdb.subscribeDefenseCommand = true;
         rdb.subscribeBuildDomeCommand = true;
         rdb.subscribeDomeBuilt = true;
+        rdb.subscribeBuildHyperJumpCmd = true;
         initialOxygen = (int)Math.floor(uc.getAstronautInfo().getOxygen());
         c.logger.log("Spawn");
         attackStarted = false;
@@ -54,7 +53,7 @@ public class AstronautTask extends Task {
 
         AstronautInfo[] enemies = uc.senseAstronauts(c.visionRange, c.opponent);
 
-        if (currentSurveyTask == null && currentDefTask == null && uc.senseStructures(c.visionRange, c.team).length > 0 && enemies.length > 0) {
+        if (currentBuildHyperJumpCmd == null && currentBuildDomeCmd == null && currentSurveyTask == null && currentDefTask == null && uc.senseStructures(c.visionRange, c.team).length > 0 && enemies.length > 0) {
             int nearestIdx = Vector2D.getNearest(c.loc, enemies, enemies.length);
             currentDefTask = new DefenseTask(c, new DefenseCommand(enemies[nearestIdx].getLocation()));
         }
@@ -82,6 +81,8 @@ public class AstronautTask extends Task {
                 currentExpansionWorkerTask = new ExpansionWorkerTask(c, ((ExpansionCommand) msg), retrievePaxTask);
             } else if (msg instanceof BuildDomeCommand) {
                 currentBuildDomeCmd = (BuildDomeCommand) msg;
+            } else if (msg instanceof BuildHyperJumpCommand) {
+                currentBuildHyperJumpCmd = (BuildHyperJumpCommand) msg;
             } else if (msg instanceof InquireDomeMessage) {
                 currentInquireDomeMsg = (InquireDomeMessage) msg;
             } else if (msg instanceof DomeBuiltNotification) {
@@ -152,6 +153,8 @@ public class AstronautTask extends Task {
             currentExpansionWorkerTask.run();
         } else if (currentBuildDomeCmd != null) {
             handleBuildDome();
+        } else if (currentBuildHyperJumpCmd != null) {
+            handleBuildHyperJump();
         } else if (rdb.enemyHqSize > 0) {
             if (uc.getAstronautInfo().getCarePackage() == CarePackage.REINFORCED_SUIT) {
                 if (!attackEnemyHq()) {
@@ -198,6 +201,18 @@ public class AstronautTask extends Task {
         for (Direction dir: c.getFirstDirs(c.loc.directionTo(currentBuildDomeCmd.target))) {
             if (uc.canPerformAction(ActionType.BUILD_DOME, dir, 1)) {
                 uc.performAction(ActionType.BUILD_DOME, dir, 1);
+                return;
+            }
+        }
+    }
+
+    private void handleBuildHyperJump() {
+        c.destination = currentBuildHyperJumpCmd.target;
+
+        if (c.loc.equals(currentBuildHyperJumpCmd.target)) {
+            if (uc.canPerformAction(ActionType.BUILD_HYPERJUMP, Direction.ZERO, 1)) {
+                uc.performAction(ActionType.BUILD_HYPERJUMP, Direction.ZERO, 1);
+                c.logger.log("Built hyper jump!");
                 return;
             }
         }

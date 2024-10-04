@@ -27,6 +27,7 @@ public class RemoteDatabase extends Database {
     public boolean subscribeDomeBuilt = false;
     public boolean subscribeDomeDestroyed = false;
     public boolean subscribeExpansionMissedMsg = false;
+    public boolean subscribeBuildHyperJumpCmd = false;
     public boolean subscribeAlert = true;
 
     public int[][] surveyorStates;
@@ -135,6 +136,14 @@ public class RemoteDatabase extends Database {
     public void sendBuildDomeCommand(int builderId, Location targetLoc) {
         c.logger.log("Sending builder %d to build dome at %s", builderId, targetLoc);
         uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_BUILD_DOME_CMD);
+        uc.performAction(ActionType.BROADCAST, null, builderId);
+        uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
+        uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
+    }
+
+    public void sendBuildHyperJumpCommand(int builderId, Location targetLoc) {
+        c.logger.log("Sending builder %d to build hyper jump at %s", builderId, targetLoc);
+        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_BUILD_HYPER_JUMP_CMD);
         uc.performAction(ActionType.BROADCAST, null, builderId);
         uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
         uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
@@ -258,6 +267,16 @@ public class RemoteDatabase extends Database {
                     }
                 } else {
                     uc.eraseBroadcastBuffer(dc.MSG_SIZE_BUILD_DOME_CMD); // ID wasn't read
+                }
+            } else if (msgId == dc.MSG_ID_BUILD_HYPER_JUMP_CMD) {
+                if (subscribeBuildHyperJumpCmd) {
+                    if (c.id == uc.pollBroadcast().getMessage()) {
+                        return new BuildHyperJumpCommand(new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage()));
+                    } else {
+                        uc.eraseBroadcastBuffer(dc.MSG_SIZE_BUILD_HYPER_JUMP_CMD - 1); // -1 ID
+                    }
+                } else {
+                    uc.eraseBroadcastBuffer(dc.MSG_SIZE_BUILD_HYPER_JUMP_CMD); // ID wasn't read
                 }
             } else if (msgId == dc.MSG_ID_INQUIRE_DOME) {
                 if (subscribeBuildDomeCommand) {
@@ -610,6 +629,8 @@ public class RemoteDatabase extends Database {
             return dc.MSG_ID_BUILD_DOME_CMD;
         } else if (broadcasted == dc.MSG_ID_INQUIRE_DOME) {
             return dc.MSG_ID_INQUIRE_DOME;
+        }  else if (broadcasted == dc.MSG_ID_BUILD_HYPER_JUMP_CMD) {
+            return dc.MSG_ID_BUILD_HYPER_JUMP_CMD;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_SURVEY_COMPLETE_GOOD) {
             return dc.MSG_ID_SURVEY_COMPLETE_GOOD;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_SURVEY_COMPLETE_BAD) {

@@ -11,8 +11,8 @@ public class RetrievePackageTask extends Task {
 
     final int[] defaultScores = {
         0, //SETTLEMENT
-        0, //DOME
-        0, //HYPERJUMP
+        2, //DOME
+        10, //HYPERJUMP
         0, //RADIO
         200, //REINFORCED_SUIT
         50, //SURVIVAL_KIT
@@ -22,7 +22,7 @@ public class RetrievePackageTask extends Task {
 
     final int[] midGameScores = {
             0, //SETTLEMENT
-            100, //DOME
+            2, //DOME
             0, //HYPERJUMP
             0, //RADIO
             200, //REINFORCED_SUIT

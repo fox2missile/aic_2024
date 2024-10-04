@@ -59,6 +59,11 @@ public class DbConst {
     public final int MSG_SIZE_BUILD_DOME_CMD = 3;
     // {builder id, x, y}
 
+
+    // MSG_ID_BUILD_HYPER_JUMP_CMD
+    public final int MSG_SIZE_BUILD_HYPER_JUMP_CMD = 3;
+    // {builder id, x, y}
+
     public final int MSG_SIZE_INQUIRE_DOME = 3;
 
 
@@ -123,5 +128,6 @@ public class DbConst {
     public final int MSG_ID_DOME_BUILT = MSG_ID_BEGIN - 18;
     public final int MSG_ID_DOME_DESTROYED = MSG_ID_BEGIN - 19;
     public final int MSG_ID_EXPANSION_MISSED = MSG_ID_BEGIN - 20;
+    public final int MSG_ID_BUILD_HYPER_JUMP_CMD = MSG_ID_BEGIN - 21;
 
 }
