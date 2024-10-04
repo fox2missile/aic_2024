@@ -102,19 +102,20 @@ public class DefenseAssginerTask extends Task {
 
     public void assignDefenders(AlertMessage alert) {
         c.logger.log("trying to assign defenders from alert message..");
-        if (Vector2D.chebysevDistance(c.loc, alert.target) > 35) {
+        int dist = Vector2D.chebysevDistance(c.loc, alert.target);
+        if (dist > 35) {
             return;
         }
         int nearestHqIdx = Vector2D.getNearest(alert.target, rdb.hqLocs, rdb.hqCount);
         if (nearestHqIdx != rdb.hqIdx) {
-            if (Vector2D.chebysevDistance(alert.target, c.loc) < 5) {
+            if (dist < 5) {
                 alert.enemyStrength /= 2;
             } else {
                 return;
             }
         }
 
-        int oxygenNeeded = Math.max(11, Vector2D.chebysevDistance(c.loc, alert.target) + 5);
+        int oxygenNeeded = Math.max(10, ((Vector2D.chebysevDistance(c.loc, alert.target) * 4) / 5));
         for (Direction dir: c.getFirstDirs(c.loc.directionTo(alert.target))) {
             if (uc.canEnlistAstronaut(dir, oxygenNeeded, null)) {
                 uc.enlistAstronaut(dir, oxygenNeeded, null);

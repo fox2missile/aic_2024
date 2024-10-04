@@ -11,12 +11,13 @@ public class DefenseTask extends Task {
 
     DefenseCommand cmd;
     boolean finished;
-
+    Task nearbyPaxRetrievalTask;
 
     public DefenseTask(C c, DefenseCommand cmd) {
         super(c);
         this.cmd = cmd;
         finished = false;
+        nearbyPaxRetrievalTask = RetrievePackageTask.createNearbyPackageTask(c);
     }
 
     @Override
@@ -44,6 +45,10 @@ public class DefenseTask extends Task {
         if (Vector2D.chebysevDistance(c.loc, c.destination) > c.remainingSteps()) {
             finished = true;
             c.destination = null;
+            nearbyPaxRetrievalTask.run();
+            if (c.destination == null) {
+                c.destination = cmd.target;
+            }
         }
 
         if (Vector2D.manhattanDistance(c.loc, cmd.target) <= 3 && enemies.length == 0) {
