@@ -28,6 +28,9 @@ public class Scanner {
     private boolean visibleEnemiesValid;
     public int immediateBlockers;
 
+    int totalSavedOxygen;
+    public int defaultAvailableEnlistSlot;
+
     public Scanner(C c) {
         this.c = c;
         this.uc = c.uc;
@@ -43,12 +46,18 @@ public class Scanner {
     }
 
     public void initAvailableEnlistSlot() {
-        c.ldb.availableEnlistSlot = 0;
+        c.ldb.availableEnlistSlot = getRealtimeAvailableEnlistSlot();
+        defaultAvailableEnlistSlot = c.ldb.availableEnlistSlot;
+    }
+
+    public int getRealtimeAvailableEnlistSlot() {
+        int slot = 0;
         for (Direction dir: c.allDirs) {
             if (uc.canEnlistAstronaut(dir, 10, null)) {
-                c.ldb.availableEnlistSlot++;
+                slot++;
             }
         }
+        return slot;
     }
 
     public void trySendAlert() {
