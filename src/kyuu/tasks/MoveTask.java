@@ -16,6 +16,21 @@ public class MoveTask extends Task {
     boolean parallelSearchValid;
     boolean parallelSearchAllowed;
 
+    class Jump {
+        Location src;
+        Direction dir;
+        int steps;
+
+        Location landing;
+
+        public Jump(Location src, Direction dir, int steps, Location landing) {
+            this.src = src;
+            this.dir = dir;
+            this.steps = steps;
+            this.landing = landing;
+        }
+    }
+
     private Direction back;
     public MoveTask(C c) {
         super(c);
@@ -38,36 +53,54 @@ public class MoveTask extends Task {
             parallelSearchValid = false;
         }
 
-        if (uc.senseObjectAtLocation(c.loc) == MapObject.HYPERJUMP) {
-            Direction generalDir = c.loc.directionTo(c.destination);
-            int prevDist = c.loc.distanceSquared(c.destination);
-            Direction[] dirs = new Direction[]{generalDir, generalDir.rotateRight(), generalDir.rotateLeft()};
-            int bestDist = Integer.MAX_VALUE;
-            Direction bestDir = Direction.ZERO;
-            Location bestLanding = c.loc;
-            int bestStep = 0;
-            for (Direction dir: dirs) {
-                for (int j = GameConstants.MAX_JUMP; j > 0; j--) {
-                    Location landing = c.loc.add(dir.dx * j, dir.dy * j);
-                    int dist = landing.distanceSquared(c.destination);
-                    if (dist < prevDist && uc.canPerformAction(ActionType.JUMP, dir, j)) {
-                        if (dist < bestDist) {
-                            bestDist = dist;
-                            bestLanding = landing;
-                            bestDir = dir;
-                            bestStep = j;
-                        }
-                    }
+
+        // consider jumps
+        Location[] hyperJumps = uc.senseObjects(MapObject.HYPERJUMP, c.actionRange);
+        if (hyperJumps.length > 0) {
+            int bestDist = c.loc.distanceSquared(c.destination);
+            // baseline
+            for (Direction dir: c.allDirs) {
+                if (!c.canMove(dir)) {
+                    continue;
+                }
+                Location check = c.loc.add(dir);
+                int dist = check.distanceSquared(c.destination);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    // don't even need to save the dir
                 }
             }
-            if (bestDir != Direction.ZERO) {
-                uc.performAction(ActionType.JUMP, bestDir, bestStep);
-                c.logger.log("jump %s -> %s", c.loc, bestLanding);
-                c.loc = bestLanding;
+
+            Jump bestJump = null;
+            for (Location jumpLoc: hyperJumps) {
+                if (!jumpLoc.equals(c.loc) && !c.canMove(c.loc.directionTo(jumpLoc))) {
+                    continue;
+                }
+                Jump jump = findBestJump(jumpLoc, bestDist);
+                if (jump == null) {
+                    continue;
+                }
+                bestDist = jump.landing.distanceSquared(c.destination);
+                bestJump = jump;
+            }
+
+            if (bestJump != null) {
+                if (!bestJump.src.equals(c.loc)) {
+                    c.move(c.loc.directionTo(bestJump.src));
+                }
+                uc.performAction(ActionType.JUMP, bestJump.dir, bestJump.steps);
+                c.logger.log("jump %s -> %s", c.loc, bestJump.landing);
+                c.loc = bestJump.landing;
                 parallelSearchAllowed = true;
                 parallelSearchValid = false;
+
             }
         }
+
+        if (!c.canMove()) {
+            return;
+        }
+
 
         if (parallelSearchAllowed) {
             Direction dir = (parallelSearchValid) ?
@@ -89,10 +122,36 @@ public class MoveTask extends Task {
             naivePathFinder.initTurn();
             naivePathFinder.move(c.destination);
         }
-//        mPathFinder.plan(c.destination);
-//        mPathFinder.executeMove();
+
         c.uc.drawLineDebug(c.uc.getLocation(), c.destination, 255, 255, 0);
 
+    }
+
+    private Jump findBestJump(Location src, int baselineDist) {
+        Direction generalDir = src.directionTo(c.destination);
+        Direction[] dirs = new Direction[]{generalDir, generalDir.rotateRight(), generalDir.rotateLeft()};
+        int bestDist = baselineDist;
+        Direction bestDir = Direction.ZERO;
+        Location bestLanding = src;
+        int bestStep = 0;
+        for (Direction dir: dirs) {
+            for (int j = GameConstants.MAX_JUMP; j > 0; j--) {
+                Location landing = src.add(dir.dx * j, dir.dy * j);
+                int dist = landing.distanceSquared(c.destination);
+                if (dist < baselineDist && uc.canPerformAction(ActionType.JUMP, dir, j)) {
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        bestDir = dir;
+                        bestStep = j;
+                        bestLanding = landing;
+                    }
+                }
+            }
+        }
+        if (bestDir != Direction.ZERO) {
+            return new Jump(src, bestDir, bestStep, bestLanding);
+        }
+        return null;
     }
 
     private int getPathFinderOptimalStepCount() {
