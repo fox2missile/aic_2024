@@ -10,26 +10,16 @@ public class RetrievePackageTask extends Task {
     int[] packagesBaseScore;
 
     final int[] defaultScores = {
-        0, //SETTLEMENT
+        -1, //SETTLEMENT
         2, //DOME
         10, //HYPERJUMP
-        0, //RADIO
+        -1, //RADIO
         200, //REINFORCED_SUIT
         50, //SURVIVAL_KIT
         200, //OXYGEN_TANK
         400, //PLANTS
     };
 
-    final int[] midGameScores = {
-            0, //SETTLEMENT
-            2, //DOME
-            0, //HYPERJUMP
-            0, //RADIO
-            200, //REINFORCED_SUIT
-            50, //SURVIVAL_KIT
-            200, //OXYGEN_TANK
-            400, //PLANTS
-    };
     int[] scoreMap;
 
     int prevRound;
@@ -65,6 +55,19 @@ public class RetrievePackageTask extends Task {
         }, c.actionRange);
     }
 
+    public static RetrievePackageTask createPlantsGatheringTask(C c) {
+        return new RetrievePackageTask(c, new int[]{
+                -1, //SETTLEMENT
+                -1, //DOME
+                -1, //HYPERJUMP
+                -1, //RADIO
+                -1, //REINFORCED_SUIT
+                -1, //SURVIVAL_KIT
+                -1, //OXYGEN_TANK
+                400, //PLANTS
+        }, c.visionRange);
+    }
+
     @Override
     public void run() {
         if (target != null) {
@@ -78,6 +81,9 @@ public class RetrievePackageTask extends Task {
         int bestScore = Integer.MIN_VALUE;
         CarePackageInfo bestPax = null;
         for (CarePackageInfo pax: uc.senseCarePackages(visionRange)) {
+            if (scoreMap[pax.getCarePackageType().ordinal()] < 0) {
+                continue;
+            }
             int dist = Vector2D.chebysevDistance(c.loc, pax.getLocation());
             if (dist > c.remainingSteps()) {
                 continue;
