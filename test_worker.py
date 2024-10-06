@@ -21,7 +21,7 @@ class TestWorker:
         print('[{}] Worker #{}: {}'.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), self.id, msg))
 
     def run_match(self, match: Match):
-        replay_file = str(match) + '.bc23'
+        replay_file = str(match)
         replay_file = replay_file.replace(' ', '-').replace(':', '_')
         self.log("replay file: " + replay_file)
         result = subprocess.run([
