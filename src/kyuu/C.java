@@ -10,7 +10,7 @@ import kyuu.log.LoggerStandard;
 
 // C stands for Context
 public class C {
-    public final boolean DEBUG = false; // todo: better boom
+    public final boolean DEBUG = true; // todo: better boom
     public UnitController uc;
     public Team team;
     public Team opponent;
@@ -28,8 +28,8 @@ public class C {
     public LocalDatabase ldb;
     public RemoteDatabase rdb;
 
-    int mapWidth;
-    int mapHeight;
+    public final int mapWidth;
+    public final int mapHeight;
 
     public final Direction[] directionsNorthCcw = {
             Direction.NORTH,
@@ -259,5 +259,17 @@ public class C {
                 first.opposite().rotateLeft(), first.opposite().rotateRight(),
                 first.opposite()
         };
+    }
+
+    public Location mirrorHorizontal(Location loc) {
+        return new Location(loc.x, mapHeight - loc.y - 1);
+    }
+
+    public Location mirrorVertical(Location loc) {
+        return new Location(mapWidth - loc.x - 1, loc.y);
+    }
+
+    public Location mirrorRotational(Location loc) {
+        return new Location(mapWidth - loc.x - 1, mapHeight - loc.y - 1);
     }
 }

@@ -16,6 +16,8 @@ public class AstronautTask extends Task {
     DefenseTask currentDefTask;
     BuildDomeCommand currentBuildDomeCmd;
     BuildHyperJumpCommand currentBuildHyperJumpCmd;
+    SuppressionCommand currentSuppressionCmd;
+    SuppressionCommand defaultSuppressionCmd;
 
     DomeBuiltNotification latestDomeBuiltNotification;
     Task currentSurveyTask;
@@ -33,7 +35,6 @@ public class AstronautTask extends Task {
         plantsGatheringTask = RetrievePackageTask.createPlantsGatheringTask(c);
         scanSectorTask = new ScanSectorTask(c);
         retrievePaxTask = new RetrievePackageTask(c);
-        rdb.subscribeSeekSymmetryCommand = true;
         rdb.subscribeEnemyHq = true;
         rdb.subscribePackageRetrievalCommand = true;
         rdb.subscribeSurveyCommand = true;
@@ -50,6 +51,24 @@ public class AstronautTask extends Task {
                 spawnDir = s.getLocation().directionTo(c.loc);
             }
         }
+
+        rdb.seekSymmetryCommandReceiver = (int __) -> {
+            int targetId = uc.pollBroadcast().getMessage();
+            if (targetId != c.id) {
+                uc.eraseBroadcastBuffer(dc.MSG_SIZE_SYMMETRIC_SEEKER_CMD - 1);
+                return;
+            }
+            currentSymmetryCmd = new SeekSymmetryCommand(new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage()));
+        };
+
+        rdb.suppressionCommandReceiver = (int __) -> {
+            int targetId = uc.pollBroadcast().getMessage();
+            if (targetId != c.id) {
+                uc.eraseBroadcastBuffer(dc.MSG_SIZE_SUPPRESSION_CMD - 1);
+                return;
+            }
+            currentSuppressionCmd = new SuppressionCommand(new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage()));
+        };
     }
 
     @Override
@@ -70,9 +89,7 @@ public class AstronautTask extends Task {
 
         Message msg = rdb.retrieveNextMessage();
         while (msg != null) {
-            if (msg instanceof SeekSymmetryCommand && rdb.enemyHqSize == 0) {
-                currentSymmetryCmd = (SeekSymmetryCommand)msg;
-            } else if (msg instanceof EnemyHqMessage) {
+            if (msg instanceof EnemyHqMessage) {
                 if (currentSymmetryCmd != null) {
                     EnemyHqMessage enemyHq = (EnemyHqMessage) msg;
                     if (enemyHq.target.equals(currentSymmetryCmd.target)) {
@@ -104,6 +121,10 @@ public class AstronautTask extends Task {
         }
 
         seekUnknownEnemyHq();
+
+        if (rdb.enemyHqSize > 0) {
+            defaultSuppressionCmd = new SuppressionCommand(rdb.enemyHq[Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize)]);
+        }
 
         doActions();
 
@@ -163,15 +184,18 @@ public class AstronautTask extends Task {
             handleBuildDome();
         } else if (currentBuildHyperJumpCmd != null) {
             handleBuildHyperJump();
+        } else if (currentSuppressionCmd != null) {
+            handleSuppression(currentSuppressionCmd);
         } else if (rdb.enemyHqSize > 0) {
             if (uc.getAstronautInfo().getCarePackage() == CarePackage.REINFORCED_SUIT) {
                 if (!attackEnemyHq()) {
                     handleFreeRoam();
                 }
+            } else if (defaultSuppressionCmd != null) {
+                handleSuppression(defaultSuppressionCmd);
             } else {
-                handleSuppression();
+                handleFreeRoam();
             }
-
         } else {
             handleFreeRoam();
         }
@@ -357,10 +381,9 @@ public class AstronautTask extends Task {
         return true;
     }
 
-    private void handleSuppression() {
+    private void handleSuppression(SuppressionCommand cmd) {
         c.destination = null;
-        int nearestHqIdx = Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize);
-        Location target = rdb.enemyHq[nearestHqIdx];
+        Location target = cmd.target;
 
         if (uc.getRound() < 350) {
             plantsGatheringTask.run();
@@ -391,7 +414,7 @@ public class AstronautTask extends Task {
                     value *= value;
                 } else if (pax != null) {
                     value += 10;
-                }
+                } // todo: value should be zero if not reinforced and still under construction
                 if (value > highestValue) {
                     attackIdx = i;
                     highestValue = value;

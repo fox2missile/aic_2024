@@ -15,8 +15,11 @@ public class RemoteDatabase extends Database {
     public Location[] enemyHq;
     public int enemyHqSize;
 
-    public boolean subscribeSeekSymmetryCommand = false;
-    public boolean subscribeSeekSymmetryComplete = false;
+//    public boolean subscribeSeekSymmetryCommand = false;
+//    public boolean subscribeSeekSymmetryComplete = false;
+    public MessageReceiver seekSymmetryCompleteReceiver;
+    public MessageReceiver seekSymmetryCommandReceiver;
+    public MessageReceiver suppressionCommandReceiver;
     public boolean subscribeEnemyHq = false;
     public boolean subscribeDefenseCommand = false;
     public boolean subscribeSurveyCommand = false;
@@ -130,6 +133,7 @@ public class RemoteDatabase extends Database {
 
 
     public void sendDefenseCommand(int defenderId, Location targetLoc) {
+        c.logger.log("sending defender %d to defend %s", defenderId, targetLoc);
         uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_DEFENSE_CMD);
         uc.performAction(ActionType.BROADCAST, null, defenderId);
         uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
@@ -148,6 +152,14 @@ public class RemoteDatabase extends Database {
         c.logger.log("Sending builder %d to build hyper jump at %s", builderId, targetLoc);
         uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_BUILD_HYPER_JUMP_CMD);
         uc.performAction(ActionType.BROADCAST, null, builderId);
+        uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
+        uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
+    }
+
+    public void sendSuppressionCommand(int attackerId, Location targetLoc) {
+        c.logger.log("Sending attacker %d to suppress %s", attackerId, targetLoc);
+        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_SUPPRESSION_CMD);
+        uc.performAction(ActionType.BROADCAST, null, attackerId);
         uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
         uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
     }
@@ -215,8 +227,12 @@ public class RemoteDatabase extends Database {
         }
     }
 
+    public int getThisHqExpansionId() {
+        return hqIdx * dc.EXPANSION_SIZE;
+    }
+
     private boolean isSubscribingExpansionId(int id) {
-        int rangeBegin = hqIdx * dc.EXPANSION_SIZE;
+        int rangeBegin = getThisHqExpansionId();
         int rangeEnd = (hqIdx + 1) * dc.EXPANSION_SIZE;
         return rangeBegin <= id && id < rangeEnd;
     }
@@ -232,12 +248,8 @@ public class RemoteDatabase extends Database {
             int fullMsg = b.getMessage();
             int msgId = getMsgId(fullMsg);
             if (msgId == dc.MSG_ID_SYMMETRIC_SEEKER_CMD) {
-                if (subscribeSeekSymmetryCommand) {
-                    if (c.id == uc.pollBroadcast().getMessage() || uc.isStructure()) {
-                        return new SeekSymmetryCommand(new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage()));
-                    } else {
-                        uc.eraseBroadcastBuffer(dc.MSG_SIZE_SYMMETRIC_SEEKER_CMD - 1); // -1 ID
-                    }
+                if (seekSymmetryCommandReceiver != null) {
+                    seekSymmetryCommandReceiver.receive(fullMsg);
                 } else {
                     uc.eraseBroadcastBuffer(dc.MSG_SIZE_SYMMETRIC_SEEKER_CMD); // ID wasn't read
                 }
@@ -287,6 +299,8 @@ public class RemoteDatabase extends Database {
                     if (uc.canSenseLocation(inquiryLoc) && uc.isDomed(inquiryLoc)) {
                         return new InquireDomeMessage(inquiryLoc);
                     }
+                } else {
+                    uc.eraseBroadcastBuffer(dc.MSG_SIZE_INQUIRE_DOME);
                 }
             } else if (msgId == dc.MSG_ID_SURVEY_CMD) {
                 if (subscribeSurveyCommand) {
@@ -330,12 +344,13 @@ public class RemoteDatabase extends Database {
                     uc.eraseBroadcastBuffer(dc.MSG_SIZE_EXPANSION); // ID wasn't read
                 }
             } else if (msgId == dc.MSG_ID_SYMMETRIC_SEEKER_COMPLETE) {
-                if (subscribeSeekSymmetryComplete) {
-                    return new SeekSymmetryComplete(
-                            new Location((fullMsg & dc.MASKER_LOC_X) >> dc.MASKER_LOC_X_SHIFT,
-                                    (fullMsg & dc.MASKER_LOC_Y) >> dc.MASKER_LOC_Y_SHIFT),
-                            fullMsg & dc.SYMMETRIC_SEEKER_COMPLETE_STATUS_MASKER);
-                } // no payload
+                if (seekSymmetryCompleteReceiver != null) {
+                    seekSymmetryCompleteReceiver.receive(fullMsg);
+                }
+            } else if (msgId == dc.MSG_ID_SUPPRESSION_CMD) {
+                if (suppressionCommandReceiver != null) {
+                    suppressionCommandReceiver.receive(fullMsg);
+                }
             } else if (msgId == dc.MSG_ID_SURVEY_COMPLETE_GOOD || msgId == dc.MSG_ID_SURVEY_COMPLETE_BAD
                     || msgId == dc.MSG_ID_SURVEY_FAILED || msgId == dc.MSG_ID_SURVEY_COMPLETE_EXCELLENT) {
                 if (subscribeSurveyComplete) {
@@ -635,8 +650,10 @@ public class RemoteDatabase extends Database {
             return dc.MSG_ID_BUILD_DOME_CMD;
         } else if (broadcasted == dc.MSG_ID_INQUIRE_DOME) {
             return dc.MSG_ID_INQUIRE_DOME;
-        }  else if (broadcasted == dc.MSG_ID_BUILD_HYPER_JUMP_CMD) {
+        } else if (broadcasted == dc.MSG_ID_BUILD_HYPER_JUMP_CMD) {
             return dc.MSG_ID_BUILD_HYPER_JUMP_CMD;
+        } else if (broadcasted == dc.MSG_ID_SUPPRESSION_CMD) {
+            return dc.MSG_ID_SUPPRESSION_CMD;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_SURVEY_COMPLETE_GOOD) {
             return dc.MSG_ID_SURVEY_COMPLETE_GOOD;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_SURVEY_COMPLETE_BAD) {

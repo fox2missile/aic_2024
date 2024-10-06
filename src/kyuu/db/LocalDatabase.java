@@ -22,12 +22,27 @@ public class LocalDatabase extends Database {
     public int minReserveEnlistSlot;
     public int availableEnlistSlot;
 
+
+    public Location[] symmetryCandidates;
+
     public LocalDatabase(C c) {
         super(c);
         this.sectorStatusMap = new FastLocIntMap();
         this.assignedThisRound = new int[5];
         this.assignedThisRoundSize = 0;
         this.pendingExploreStack = new FastLocStack(20);
+    }
+
+    public boolean isHorizontalSymmetry() {
+        return horizontalSymmetryPossible && !verticalSymmetryPossible && !rotationalSymmetryPossible;
+    }
+
+    public boolean isVerticalSymmetry() {
+        return !horizontalSymmetryPossible && verticalSymmetryPossible && !rotationalSymmetryPossible;
+    }
+
+    public boolean isRotationalSymmetry() {
+        return !horizontalSymmetryPossible && !verticalSymmetryPossible && rotationalSymmetryPossible;
     }
 
     public boolean enlistFullyReserved() {
