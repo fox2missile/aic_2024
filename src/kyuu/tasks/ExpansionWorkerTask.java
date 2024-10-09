@@ -66,9 +66,18 @@ public class ExpansionWorkerTask extends Task {
     private void handleEstablished() {
         c.destination = null;
 
-        if (cmd.state == dc.EXPANSION_STATE_HAS_DOME && uc.canSenseLocation(cmd.target) && !uc.isDomed(cmd.target) && c.remainingSteps() < 5) {
-            rdb.sendDomeDestroyedMsg(new DomeDestroyedNotification(cmd.target));
-            return;
+
+        if (cmd.state == dc.EXPANSION_STATE_HAS_DOME && Vector2D.chebysevDistance(cmd.target, c.loc) < 3 && c.remainingSteps() < 5) {
+            boolean domeFound = false;
+            for (Location loc: uc.senseObjects(MapObject.DOME, c.visionRange)) {
+                if (Vector2D.chebysevDistance(cmd.target, loc) < 3) {
+                    domeFound = true;
+                }
+            }
+            if (!domeFound) {
+                rdb.sendDomeDestroyedMsg(new DomeDestroyedNotification(cmd.target, cmd.expansionId));
+            }
+
         }
 
         if (c.remainingSteps() < 5 || reachedTarget) {
@@ -160,7 +169,7 @@ public class ExpansionWorkerTask extends Task {
         }
 
         c.destination = cmd.target;
-        if (uc.senseObjectAtLocation(c.loc) != MapObject.TERRAFORMED && uc.canPerformAction(ActionType.TERRAFORM, Direction.ZERO, 1)) {
+        if (!c.loc.equals(c.startLoc) && uc.senseObjectAtLocation(c.loc) != MapObject.TERRAFORMED && uc.canPerformAction(ActionType.TERRAFORM, Direction.ZERO, 1)) {
             uc.performAction(ActionType.TERRAFORM, Direction.ZERO, 1);
         }
     }

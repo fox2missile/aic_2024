@@ -10,7 +10,7 @@ import kyuu.log.LoggerStandard;
 
 // C stands for Context
 public class C {
-    public final boolean DEBUG = true; // todo: better boom
+    public final boolean DEBUG = false; // todo: better boom
     public UnitController uc;
     public Team team;
     public Team opponent;
@@ -22,6 +22,7 @@ public class C {
     public int visionRangeStep;
     public float actionRange;
     public Location loc;
+    public Location startLoc;
     public int id;
     public Scanner s;
     public DbConst dc;
@@ -243,6 +244,7 @@ public class C {
 
         seed = (int)(uc.getRandomDouble() * 100);
         loc = uc.getLocation();
+        startLoc = uc.getLocation();
         s = new Scanner(this);
 
         visionRange = uc.isStructure() ? (uc.getType() == StructureType.HQ ? 64 : 49) : 25;
