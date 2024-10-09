@@ -35,27 +35,31 @@ public class EnlistSuppressorsTask extends Task {
     private int estimateMapMagnitude() {
         if (rdb.enemyHqSize > 0) {
             Location nearestEnemyHq = rdb.enemyHq[Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize)];
-            return Vector2D.chebysevDistance(c.loc, nearestEnemyHq);
+            return c.loc.distanceSquared(nearestEnemyHq);
         }
 
         // estimate from symmetry
         int biggestMagnitude = 0;
         for (int i = 0; i < ldb.symmetryCandidates.length; i++) {
+            boolean validSymmetry = false;
             if (i % 3 == dc.SYMMETRY_HORIZONTAL && ldb.horizontalSymmetryPossible) {
-                biggestMagnitude = Math.max(biggestMagnitude, Vector2D.chebysevDistance(c.loc, ldb.symmetryCandidates[i]));
+                validSymmetry = true;
             } else if (i % 3 == dc.SYMMETRY_VERTICAL && ldb.verticalSymmetryPossible) {
-                biggestMagnitude = Math.max(biggestMagnitude, Vector2D.chebysevDistance(c.loc, ldb.symmetryCandidates[i]));
+                validSymmetry = true;
             } else if (i % 3 == dc.SYMMETRY_ROTATIONAL && ldb.rotationalSymmetryPossible) {
-                biggestMagnitude = Math.max(biggestMagnitude, Vector2D.chebysevDistance(c.loc, ldb.symmetryCandidates[i]));
+                validSymmetry = true;
+            }
+            if (validSymmetry) {
+                biggestMagnitude = Math.max(biggestMagnitude, c.loc.distanceSquared(ldb.symmetryCandidates[i]));
             }
         }
         return biggestMagnitude;
     }
 
-//    private int estimateReserveOxygen() {
-//        int magnitude = estimateMapMagnitude();
-//        if (magnitude)
-//    }
+    private int estimateReserveOxygen() {
+        int magnitude = estimateMapMagnitude();
+        return Math.min(magnitude, 400);
+    }
 
     Location getNextSuppressionTarget(int dice) {
         if (rdb.enemyHqSize == 0) {
@@ -131,19 +135,20 @@ public class EnlistSuppressorsTask extends Task {
             }
         }
 
-        if (ldb.enlistFullyReserved() || uc.getStructureInfo().getOxygen() < 400 || uc.getRound() % cooldown != 0) {
+        if (ldb.enlistFullyReserved() || uc.getStructureInfo().getOxygen() < estimateReserveOxygen() || uc.getRound() % cooldown != 0) {
             return;
         }
 
         int nearestEnemyHqIdx = Vector2D.getNearestChebysev(c.loc, rdb.enemyHq, rdb.enemyHqSize);
         Location enemyHq = rdb.enemyHq[nearestEnemyHqIdx];
 
-        int dist = Vector2D.chebysevDistance(c.loc, enemyHq);
-        if (dist > 30) {
+        int stepDist = Vector2D.chebysevDistance(c.loc, enemyHq);
+        int dist = c.loc.distanceSquared(enemyHq);
+        if (dist > 2 * 30 * 30) {
             return;
         }
 
-        int givenOxygen = Math.max(dist, 10);
+        int givenOxygen = Math.max(stepDist, 10);
 
         for (Direction dir: Direction.values()) {
             if (c.uc.canEnlistAstronaut(dir, givenOxygen, null)) {
