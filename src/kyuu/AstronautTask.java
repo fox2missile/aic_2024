@@ -347,39 +347,20 @@ public class AstronautTask extends Task {
             return false;
         }
 
-        if (uc.canSenseLocation(target)) {
-            if (uc.senseStructure(target) == null) {
-                rdb.sendEnemyHqDestroyedMessage(target);
+        if (Vector2D.chebysevDistance(c.loc, target) == 1) {
+            c.s.attackEnemyBaseDirectly(target);
+            if (tryReportEnemyHqDestroyed(target)) {
                 return true;
-            }
-            while (c.loc.distanceSquared(target) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1)) {
-                uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1);
             }
         }
 
-        // attack anyone nearby
-        AstronautInfo[] enemies = uc.senseAstronauts(c.actionRange, c.team.getOpponent());
-        if (enemies.length > 0) {
-            int attackIdx = -1;
-            for (int i = 0; i < enemies.length; i++) {
-                if (enemies[i].getLocation().distanceSquared(target) <= c.actionRange * 2 && c.loc.distanceSquared(enemies[i].getLocation()) <= c.actionRange) {
-                    attackIdx = i;
-                    break;
-                }
+        if (Vector2D.chebysevDistance(c.loc, target) == 2) {
+            c.s.attackEnemyBaseStepNeeded(target);
+            c.destination = c.loc;
+            if (tryReportEnemyHqDestroyed(target)) {
+                return true;
             }
-            if (attackIdx != -1) {
-                c.destination = enemies[attackIdx].getLocation();
-                if (c.loc.distanceSquared(c.destination) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1)) {
-                    uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1);
-                }
-                if (c.canMove(c.loc.directionTo(c.destination))) {
-                    c.move(c.loc.directionTo(c.destination));
-                    while (c.loc.distanceSquared(target) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1)) {
-                        uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1);
-                    }
-                }
-            }
-
+            return true;
         }
 
         c.destination = target;
@@ -403,13 +384,24 @@ public class AstronautTask extends Task {
         }
 
         if (uc.canSenseLocation(target)) {
-            if (uc.senseStructure(target) == null) {
-                rdb.sendEnemyHqDestroyedMessage(target);
+
+            if (tryReportEnemyHqDestroyed(target)) {
                 return;
             }
-            while (c.loc.distanceSquared(target) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1)) {
-                uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1);
+
+            StructureInfo s = uc.senseStructure(target);
+            if (s != null && s.getTeam() == c.opponent) {
+                if (Vector2D.chebysevDistance(c.loc, target) == 1) {
+                    c.s.attackEnemyBaseDirectly(target);
+                }
+
+                if (Vector2D.chebysevDistance(c.loc, target) == 2) {
+                    c.s.attackEnemyBaseStepNeeded(target);
+                    c.destination = c.loc;
+                    return;
+                }
             }
+
         }
 
         // attack anyone nearby
@@ -442,12 +434,12 @@ public class AstronautTask extends Task {
                 if (c.loc.distanceSquared(c.destination) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1)) {
                     uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1);
                 }
-                if (c.canMove(c.loc.directionTo(c.destination))) {
-                    c.move(c.loc.directionTo(c.destination));
-                    while (c.loc.distanceSquared(target) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1)) {
-                        uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1);
-                    }
-                }
+//                if (c.canMove(c.loc.directionTo(c.destination))) {
+//                    c.move(c.loc.directionTo(c.destination));
+//                    while (c.loc.distanceSquared(target) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1)) {
+//                        uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1);
+//                    }
+//                }
             }
 
         }
@@ -496,6 +488,15 @@ public class AstronautTask extends Task {
 
         }
 
+    }
+
+    private boolean tryReportEnemyHqDestroyed(Location target) {
+        StructureInfo s = uc.senseStructure(target);
+        if (s == null && rdb.isKnownEnemyHq(target)) {
+            rdb.sendEnemyHqDestroyedMessage(target);
+            return true;
+        }
+        return false;
     }
 
 
