@@ -3,15 +3,17 @@ package kyuu.db;
 import aic2024.user.*;
 import kyuu.C;
 import kyuu.Vector2D;
-import kyuu.fast.CircularLocBuffer;
 import kyuu.fast.FastLocIntMap;
 import kyuu.fast.FastLocSet;
 import kyuu.message.*;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+
 public class RemoteDatabase extends Database {
 
-    public Location[] hqLocs;
-    public int hqCount;
+    public Location[] baseLocs;
+    public int baseCount;
     public Location[] enemyHq;
     public int enemyHqSize;
 
@@ -26,6 +28,9 @@ public class RemoteDatabase extends Database {
     public MessageReceiver domeDestroyedReceiver;
     public MessageReceiver packagePriorityNoticeReceiver;
     public MessageReceiver expansionMissedReceiver;
+    public MessageReceiver settlementCommandReceiver;
+    public MessageReceiver baseHeartbeatReceiver;
+    public MessageReceiver newSettlementReceiver;
     public boolean subscribeEnemyHq = false;
     public boolean subscribeDefenseCommand = false;
     public boolean subscribeSurveyCommand = false;
@@ -44,20 +49,24 @@ public class RemoteDatabase extends Database {
 
 
 
-    public int hqIdx;
+    public int baseIdx;
 
     private final FastLocIntMap knownAlertLocations;
     private final FastLocSet dangerSectors;
-    CircularLocBuffer recentDangerSectors;
+    private final FastLocIntMap sectorLastDanger;
+    public Deque<LocationRound> recentDangerSectors;
+    public final int RECENT_DANGER_SECTOR_MAX = 7;
+    public final int RECENT_DANGER_TIMEOUT = 30;
     public int alertCount;
 
     public RemoteDatabase(C c) {
         super(c);
         enemyHq = new Location[3];
-        hqIdx = -1;
+        baseIdx = -1;
         knownAlertLocations = new FastLocIntMap();
         dangerSectors = new FastLocSet();
-        recentDangerSectors = new CircularLocBuffer(5);
+        sectorLastDanger = new FastLocIntMap();
+        recentDangerSectors = new ArrayDeque<>(RECENT_DANGER_SECTOR_MAX);
         alertCount = 0;
     }
 
@@ -65,12 +74,34 @@ public class RemoteDatabase extends Database {
         return dangerSectors.contains(c.getSector(loc));
     }
 
+    public int countNearbyRecentDangerSectors(Location loc) {
+        int count = 0;
+        for (LocationRound lr: recentDangerSectors) {
+            Location sectorCenter = c.getSectorCenter(lr.loc);
+            if (loc.distanceSquared(sectorCenter) <= 8 * 8) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public int countNearbyRecentDangerSectors(Location loc, int lookback) {
+        int count = 0;
+        for (Location sector: dangerSectors.getKeys()) {
+            Location sectorCenter = c.getSectorCenter(sector);
+            if (loc.distanceSquared(sectorCenter) <= 8 * 8 && uc.getRound() - sectorLastDanger.getVal(sector) < lookback) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     public void initExpansionData() {
-        surveyorStates = new int[dc.EXPANSION_SIZE * dc.MAX_HQ][c.allDirs.length];
-        expansionSites = new Location[dc.EXPANSION_SIZE * dc.MAX_HQ][c.allDirs.length];
-        expansionStates = new int[dc.EXPANSION_SIZE * dc.MAX_HQ][c.allDirs.length];
-        lastBadSurvey = new int[dc.EXPANSION_SIZE * dc.MAX_HQ][c.allDirs.length];
-        expansionMissed = new int[dc.EXPANSION_SIZE * dc.MAX_HQ][c.allDirs.length];
+        surveyorStates = new int[dc.EXPANSION_SIZE * dc.MAX_BASES][c.allDirs.length];
+        expansionSites = new Location[dc.EXPANSION_SIZE * dc.MAX_BASES][c.allDirs.length];
+        expansionStates = new int[dc.EXPANSION_SIZE * dc.MAX_BASES][c.allDirs.length];
+        lastBadSurvey = new int[dc.EXPANSION_SIZE * dc.MAX_BASES][c.allDirs.length];
+        expansionMissed = new int[dc.EXPANSION_SIZE * dc.MAX_BASES][c.allDirs.length];
     }
 
     public void clearBadSurveyHistory(int expansionId, int steps) {
@@ -82,15 +113,38 @@ public class RemoteDatabase extends Database {
         }
     }
 
-    public void sendHqInfo() {
+    public void introduceHq() {
         uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_HQ);
-        if (hqIdx == -1) {
-            hqIdx = 0;
+        if (baseIdx == -1) {
+            baseIdx = 0;
             while (uc.pollBroadcast() != null) {
                 // NOTE: no one else should broadcast at round 0
-                hqIdx++;
+                baseIdx++;
             }
         }
+    }
+
+    public void introduceSettlement() {
+        baseLocs = new Location[dc.MAX_BASES];
+        baseIdx = 0;
+        baseCount = 1; // self
+        baseHeartbeatReceiver = (int __) -> {
+            BroadcastInfo idxBroadcast = uc.pollBroadcast();
+            int idx = idxBroadcast.getMessage();
+            baseLocs[idx] = idxBroadcast.getLocation();
+            baseIdx = Math.max(idx + 1, baseIdx);
+            baseCount++;
+        };
+        while (retrieveNextMessage() != null) {}
+        baseLocs[baseIdx] = c.loc;
+        baseHeartbeatReceiver = null;
+        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_NEW_SETTLEMENT);
+        uc.performAction(ActionType.BROADCAST, null, baseIdx);
+    }
+
+    public void sendBaseHeartbeat() {
+        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_BASE_HEARTBEAT);
+        uc.performAction(ActionType.BROADCAST, null, baseIdx);
     }
 
     public void initHqLocs() {
@@ -101,14 +155,14 @@ public class RemoteDatabase extends Database {
             tempLocs[otherHqCount++] = b.getLocation();
             b = uc.pollBroadcast();
         }
-        hqCount = 1 + otherHqCount;
-        hqLocs = new Location[hqCount];
-        hqLocs[hqIdx] = c.loc;
+        baseCount = 1 + otherHqCount;
+        baseLocs = new Location[dc.MAX_BASES];
+        baseLocs[baseIdx] = c.loc;
         if (otherHqCount >= 1) {
-            hqLocs[(hqIdx + 1) % hqCount] = tempLocs[0];
+            baseLocs[(baseIdx + 1) % baseCount] = tempLocs[0];
         }
         if (otherHqCount == 2) {
-            hqLocs[(hqIdx + 2) % hqCount] = tempLocs[1];
+            baseLocs[(baseIdx + 2) % baseCount] = tempLocs[1];
         }
     }
 
@@ -149,6 +203,33 @@ public class RemoteDatabase extends Database {
         uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
         uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
         uc.performAction(ActionType.BROADCAST, null, expansionId);
+        uc.performAction(ActionType.BROADCAST, null, path.length);
+        for (int i = 0; i < path.length; i++) {
+            Location source = path[i];
+            if (i >= 1) {
+                uc.drawLineDebug(path[i], path[i-1], 0, 127, 127);
+            }
+            uc.performAction(ActionType.BROADCAST, null, source.x);
+            uc.performAction(ActionType.BROADCAST, null, source.y);
+        }
+        uc.drawLineDebug(targetLoc, path[path.length - 1], 0, 255, 255);
+        // padding
+        if (path.length < dc.MAX_EXPANSION_DEPTH) {
+            for (int i = path.length; i < dc.MAX_EXPANSION_DEPTH; i++) {
+                // won't be read
+                uc.performAction(ActionType.BROADCAST, null, 0);
+                uc.performAction(ActionType.BROADCAST, null, 0);
+            }
+        }
+    }
+
+    public void sendSettlementCommand(int settlerId, int companionId, Location targetLoc, Location[] path) {
+        c.logger.log("Sending builder %d to help establish settlement at %s", settlerId, targetLoc);
+        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_SETTLEMENT_CMD);
+        uc.performAction(ActionType.BROADCAST, null, settlerId);
+        uc.performAction(ActionType.BROADCAST, null, companionId);
+        uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
+        uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
         uc.performAction(ActionType.BROADCAST, null, path.length);
         for (int i = 0; i < path.length; i++) {
             Location source = path[i];
@@ -248,13 +329,13 @@ public class RemoteDatabase extends Database {
         }
     }
 
-    public int getThisHqExpansionId() {
-        return hqIdx * dc.EXPANSION_SIZE;
+    public int getThisBaseExpansionId() {
+        return baseIdx * dc.EXPANSION_SIZE;
     }
 
     public boolean isSubscribingExpansionId(int id) {
-        int rangeBegin = getThisHqExpansionId();
-        int rangeEnd = (hqIdx + 1) * dc.EXPANSION_SIZE;
+        int rangeBegin = getThisBaseExpansionId();
+        int rangeEnd = (baseIdx + 1) * dc.EXPANSION_SIZE;
         return rangeBegin <= id && id < rangeEnd;
     }
 
@@ -266,7 +347,7 @@ public class RemoteDatabase extends Database {
     }
 
     private int getStructureExpansionId() {
-        return hqIdx * dc.EXPANSION_SIZE;
+        return baseIdx * dc.EXPANSION_SIZE;
     }
 
 
@@ -372,6 +453,12 @@ public class RemoteDatabase extends Database {
                 if (suppressionCommandReceiver != null) {
                     suppressionCommandReceiver.receive(fullMsg);
                 }
+            } else if (msgId == dc.MSG_ID_SETTLEMENT_CMD) {
+                if (settlementCommandReceiver != null) {
+                    settlementCommandReceiver.receive(fullMsg);
+                } else {
+                    uc.eraseBroadcastBuffer(dc.MSG_SIZE_SETTLEMENT_CMD); // ID wasn't read
+                }
             } else if (msgId == dc.MSG_ID_PACKAGE_PRIORITY_MAP) {
                 if (b.getID() == uc.getParent().getID() && packagePriorityNoticeReceiver != null) {
                     packagePriorityNoticeReceiver.receive(fullMsg);
@@ -452,21 +539,39 @@ public class RemoteDatabase extends Database {
                 if (domeBuiltReceiver != null) {
                     domeBuiltReceiver.receive(fullMsg);
                 } // no payload
-            }  else if (msgId == dc.MSG_ID_DOME_DESTROYED) {
+            } else if (msgId == dc.MSG_ID_DOME_DESTROYED) {
                 if (domeDestroyedReceiver != null) {
                     domeDestroyedReceiver.receive(fullMsg);
                 } // no payload
+            } else if (msgId == dc.MSG_ID_BASE_HEARTBEAT) {
+                if (baseHeartbeatReceiver != null) {
+                    baseHeartbeatReceiver.receive(fullMsg);
+                } else {
+                    uc.eraseBroadcastBuffer(dc.MSG_SIZE_BASE_HEARTBEAT);
+                }
+            } else if (msgId == dc.MSG_ID_NEW_SETTLEMENT) {
+                if (newSettlementReceiver != null) {
+                    newSettlementReceiver.receive(fullMsg);
+                } else {
+                    uc.eraseBroadcastBuffer(dc.MSG_SIZE_NEW_SETTLEMENT);
+                }
             } else if (msgId == dc.MSG_ID_ALERT) {
                 if (subscribeAlert) {
                     Location loc = new Location((fullMsg & dc.MASKER_LOC_X) >> dc.MASKER_LOC_X_SHIFT,
                             (fullMsg & dc.MASKER_LOC_Y) >> dc.MASKER_LOC_Y_SHIFT);
                     int strength = fullMsg & dc.ALERT_STRENGTH_MASKER;
                     AlertMessage msg = new AlertMessage(loc, strength);
-                    dangerSectors.add(c.getSector(msg.target));
+                    Location sector = c.getSector(msg.target);
+                    dangerSectors.add(sector);
+                    sectorLastDanger.add(sector, uc.getRound());
                     knownAlertLocations.add(msg.target, uc.getRound());
-//                    if (!recentDangerSectors.contains(msg.target)) {
-//                        recentDangerSectors.pushBack(msg.target);
-//                    }
+                    if (recentDangerSectors.size() >= RECENT_DANGER_SECTOR_MAX) {
+                        recentDangerSectors.removeFirst();
+                    }
+                    recentDangerSectors.addLast(new LocationRound(sector, uc.getRound()));
+                    while (!recentDangerSectors.isEmpty() && uc.getRound() - recentDangerSectors.peekFirst().round > RECENT_DANGER_TIMEOUT) {
+                        recentDangerSectors.removeFirst();
+                    }
                     alertCount++;
                     return msg;
                 } // no payload
@@ -655,6 +760,12 @@ public class RemoteDatabase extends Database {
             return dc.MSG_ID_SUPPRESSION_CMD;
         } else if (broadcasted == dc.MSG_ID_PACKAGE_PRIORITY_MAP) {
             return dc.MSG_ID_PACKAGE_PRIORITY_MAP;
+        } else if (broadcasted == dc.MSG_ID_SETTLEMENT_CMD) {
+            return dc.MSG_ID_SETTLEMENT_CMD;
+        } else if (broadcasted == dc.MSG_ID_BASE_HEARTBEAT) {
+            return dc.MSG_ID_BASE_HEARTBEAT;
+        } else if (broadcasted == dc.MSG_ID_NEW_SETTLEMENT) {
+            return dc.MSG_ID_NEW_SETTLEMENT;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_SURVEY_COMPLETE_GOOD) {
             return dc.MSG_ID_SURVEY_COMPLETE_GOOD;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_SURVEY_COMPLETE_BAD) {

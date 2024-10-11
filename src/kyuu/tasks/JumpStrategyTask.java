@@ -13,6 +13,8 @@ public class JumpStrategyTask extends Task {
 
     int nextBuild;
 
+    boolean enemyHqDiscovered;
+
     public JumpStrategyTask(C c) {
         super(c);
         needJumps = new Location[c.allDirs.length];
@@ -20,9 +22,36 @@ public class JumpStrategyTask extends Task {
         builders = new FastLocIntMap();
         planJumps();
         nextBuild = 0;
+        enemyHqDiscovered = false;
     }
 
     private void planJumps() {
+        for (Direction dir: c.allDirs) {
+            Location check = c.loc.add(dir);
+
+            while (uc.canSenseLocation(check) && !c.isObstacle(uc.senseObjectAtLocation(check))) {
+                check = check.add(dir);
+            }
+            Location candidate = check.add(dir.opposite());
+
+            if (!uc.canSenseLocation(check)) {
+                continue;
+            }
+
+            for (int j = 0; j < GameConstants.MAX_JUMP - 1 && uc.canSenseLocation(check) && c.isObstacle(uc.senseObjectAtLocation(check)); j++) {
+                check = check.add(dir);
+            }
+
+            if (uc.isOutOfMap(check.add(dir.dx * 3, dir.dy * 3)) || !uc.canSenseLocation(check)) {
+                continue;
+            }
+
+            needJumps[needJumpsLength++] = candidate;
+        }
+    }
+
+    private void planJumpsAdjustEnemyHq() {
+        needJumpsLength = 0;
         int nearestEnemyHqIdx = Vector2D.getNearestChebysev(c.loc, rdb.enemyHq, rdb.enemyHqSize);
 
         Direction[] enemyHqDirs = c.getFirstDirs(c.loc.directionTo(rdb.enemyHq[nearestEnemyHqIdx]));
@@ -53,6 +82,12 @@ public class JumpStrategyTask extends Task {
 
     @Override
     public void run() {
+
+        if (rdb.enemyHqSize > 0 && !enemyHqDiscovered) {
+            enemyHqDiscovered = true;
+            planJumpsAdjustEnemyHq();
+        }
+
         int currentBuildId = nextBuild;
         ldb.neededHyperJumps = 0;
         for (int i = 0; i < needJumpsLength; i++) {

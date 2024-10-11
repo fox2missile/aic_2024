@@ -77,7 +77,7 @@ public class EnlistSuppressorsTask extends Task {
             return enemyHq;
         }
 
-        int hqExpansionId = rdb.getThisHqExpansionId();
+        int hqExpansionId = rdb.getThisBaseExpansionId();
         int i = dice % c.allDirs.length;
         if (rdb.surveyorStates[hqExpansionId][i] != dc.SURVEY_BAD) {
             Location original = rdb.expansionSites[hqExpansionId][i];
@@ -146,6 +146,24 @@ public class EnlistSuppressorsTask extends Task {
         int dist = c.loc.distanceSquared(enemyHq);
         if (dist > 2 * 30 * 30) {
             return;
+        }
+
+        // check if there is a forward settlement
+        Direction enemyDir = c.loc.directionTo(enemyHq);
+        Location check = c.loc.add(enemyDir.dx * 5, enemyDir.dy * 5);
+        while (!uc.isOutOfMap(check) && Vector2D.chebysevDistance(check, enemyHq) > 5) {
+            for (int j = 0; j < rdb.baseCount; j++) {
+                if (j == rdb.baseIdx) {
+                    continue;
+                }
+                if (Vector2D.chebysevDistance(check, rdb.baseLocs[j]) < 5) {
+                    c.logger.log("no need to pressure front because of forward base");
+                    uc.drawLineDebug(c.loc, rdb.baseLocs[j], 0, 255, 0);
+                    return;
+                }
+            }
+            enemyDir = check.directionTo(enemyHq);
+            check = check.add(enemyDir.dx * 3, enemyDir.dy * 3);
         }
 
         int givenOxygen = Math.max(stepDist, 10);

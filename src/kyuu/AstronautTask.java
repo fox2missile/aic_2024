@@ -24,6 +24,7 @@ public class AstronautTask extends Task {
     Task currentSurveyTask;
     Task currentExpansionWorkerTask;
     Task plantsGatheringTask;
+    Task currentSettlerTask;
     Direction spawnDir;
 
     private final int initialOxygen;
@@ -89,6 +90,27 @@ public class AstronautTask extends Task {
             }
         };
 
+        rdb.settlementCommandReceiver = (int __) -> {
+            if (c.id == uc.pollBroadcast().getMessage()) {
+                int companionId = uc.pollBroadcast().getMessage();
+                Location target = new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage());
+                int pathSize = uc.pollBroadcast().getMessage();
+                Location[] path = new Location[pathSize];
+                for (int i = 0; i < pathSize; i++) {
+                    path[i] = new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage());
+                }
+                uc.eraseBroadcastBuffer(2 * (dc.MAX_EXPANSION_DEPTH - pathSize));
+                SettlementCommand cmd = new SettlementCommand(target, companionId, path);
+                if (uc.getAstronautInfo().getCarePackage() == CarePackage.SETTLEMENT) {
+                    currentSettlerTask = new SettlerBuilderTask(c, cmd);
+                } else {
+                    currentSettlerTask = new SettlerOxygenTask(c, cmd);
+                }
+            } else {
+                uc.eraseBroadcastBuffer(dc.MSG_SIZE_SETTLEMENT_CMD - 1); // -1 ID
+            }
+        };
+
         rdb.domeInquiryReceiver = (int __) -> {
             Location inquiryLoc = new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage());
             if (uc.canSenseLocation(inquiryLoc)) {
@@ -117,7 +139,7 @@ public class AstronautTask extends Task {
 
         AstronautInfo[] enemies = uc.senseAstronauts(c.visionRange, c.opponent);
 
-        if (currentBuildHyperJumpCmd == null && currentBuildDomeTask == null && currentSurveyTask == null && currentDefTask == null && uc.senseStructures(c.visionRange, c.team).length > 0 && enemies.length > 0) {
+        if (currentSettlerTask == null && currentBuildHyperJumpCmd == null && currentBuildDomeTask == null && currentSurveyTask == null && currentDefTask == null && uc.senseStructures(c.visionRange, c.team).length > 0 && enemies.length > 0) {
             int nearestIdx = Vector2D.getNearest(c.loc, enemies, enemies.length);
             currentDefTask = new DefenseTask(c, new DefenseCommand(enemies[nearestIdx].getLocation()));
         }
@@ -201,6 +223,8 @@ public class AstronautTask extends Task {
             }
         } else if (currentSymmetryCmd != null) {
             handleSymmetrySeekCmd();
+        } else if (currentSettlerTask != null) {
+            currentSettlerTask.run();
         } else if (currentRetPaxCmd != null) {
             if (!handleRetrievePax()) {
                 if (currentExpansionWorkerTask != null) {

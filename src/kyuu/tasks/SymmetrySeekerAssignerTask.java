@@ -4,7 +4,6 @@ import aic2024.user.*;
 import kyuu.C;
 import kyuu.Vector2D;
 import kyuu.fast.FastLocSet;
-import kyuu.message.SeekSymmetryCommand;
 import kyuu.message.SeekSymmetryComplete;
 
 public class SymmetrySeekerAssignerTask extends Task {
@@ -101,16 +100,16 @@ public class SymmetrySeekerAssignerTask extends Task {
     }
 
     public void initSymmetryCandidates() {
-        ldb.symmetryCandidates = new Location[rdb.hqCount * 3];
-        symmetryAssigned = new boolean[rdb.hqCount * 3];
-        symmetryComplete = new boolean[rdb.hqCount * 3];
-        symmetrySeekAttempts = new int[rdb.hqCount * 3];
-        symmetrySeekTimeout = new int[rdb.hqCount * 3];
+        ldb.symmetryCandidates = new Location[rdb.baseCount * 3];
+        symmetryAssigned = new boolean[rdb.baseCount * 3];
+        symmetryComplete = new boolean[rdb.baseCount * 3];
+        symmetrySeekAttempts = new int[rdb.baseCount * 3];
+        symmetrySeekTimeout = new int[rdb.baseCount * 3];
         FastLocSet symSet = new FastLocSet();
         // todo: handle allies HQ in symmetry
-        for (int i = 0; i < rdb.hqCount; i++) {
+        for (int i = 0; i < rdb.baseCount; i++) {
             // horizontal
-            ldb.symmetryCandidates[i * 3] = c.mirrorHorizontal(rdb.hqLocs[i]);
+            ldb.symmetryCandidates[i * 3] = c.mirrorHorizontal(rdb.baseLocs[i]);
             uc.drawLineDebug(c.loc, ldb.symmetryCandidates[i * 3], 0, 0, 255);
             if (!symSet.contains(ldb.symmetryCandidates[i * 3])) {
                 symSet.add(ldb.symmetryCandidates[i * 3]);
@@ -119,7 +118,7 @@ public class SymmetrySeekerAssignerTask extends Task {
                 symmetryAssigned[i * 3] = true;
             }
             // vertical
-            ldb.symmetryCandidates[(i * 3) + 1] = c.mirrorVertical(rdb.hqLocs[i]);
+            ldb.symmetryCandidates[(i * 3) + 1] = c.mirrorVertical(rdb.baseLocs[i]);
             uc.drawLineDebug(c.loc, ldb.symmetryCandidates[(i * 3) + 1], 0, 0, 255);
             if (!symSet.contains(ldb.symmetryCandidates[(i * 3) + 1])) {
                 symSet.add(ldb.symmetryCandidates[(i * 3) + 1]);
@@ -128,7 +127,7 @@ public class SymmetrySeekerAssignerTask extends Task {
                 symmetryAssigned[(i * 3) + 1] = true;
             }
             // rotational
-            ldb.symmetryCandidates[(i * 3) + 2] = c.mirrorRotational(rdb.hqLocs[i]);
+            ldb.symmetryCandidates[(i * 3) + 2] = c.mirrorRotational(rdb.baseLocs[i]);
             uc.drawLineDebug(c.loc, ldb.symmetryCandidates[(i * 3) + 2], 0, 0, 255);
             if (!symSet.contains(ldb.symmetryCandidates[(i * 3) + 2])) {
                 symSet.add(ldb.symmetryCandidates[(i * 3) + 2]);
@@ -156,8 +155,8 @@ public class SymmetrySeekerAssignerTask extends Task {
             if (symmetryAssigned[i]) {
                 continue;
             }
-            int nearestHq = Vector2D.getNearest(ldb.symmetryCandidates[i], rdb.hqLocs, rdb.hqCount);
-            if (!rdb.hqLocs[nearestHq].equals(c.loc)) {
+            int nearestHq = Vector2D.getNearest(ldb.symmetryCandidates[i], rdb.baseLocs, rdb.baseCount);
+            if (!rdb.baseLocs[nearestHq].equals(c.loc)) {
                 symmetryAssigned[i] = true;
             }
         }

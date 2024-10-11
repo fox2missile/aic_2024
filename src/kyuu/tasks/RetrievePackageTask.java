@@ -11,7 +11,7 @@ public class RetrievePackageTask extends Task {
     int[] packagesBaseScore;
 
     final int[] defaultScores = {
-        -1, //SETTLEMENT
+        100, //SETTLEMENT
         2, //DOME
         10, //HYPERJUMP
         -1, //RADIO
@@ -127,7 +127,7 @@ public class RetrievePackageTask extends Task {
         } else {
             score += scoreMap[carePackageType.ordinal()];
         }
-//        score += currentBoost.priorityBoostMap[carePackageType.ordinal()];
+        score += currentBoost.priorityBoostMap[carePackageType.ordinal()];
         return score;
     }
 

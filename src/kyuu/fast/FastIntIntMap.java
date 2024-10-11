@@ -39,14 +39,11 @@ public class FastIntIntMap {
         // String keyTemp = keyToStr(key);
         String keyTemp = "^" + (char) (key + 0x100);
         int index = keyVals.indexOf(keyTemp);
-        switch (index) {
-            case -1:
-                keyVals.append(keyTemp + (char) (val + 0x100));
-                size++;
-                break;
-            default:
-                keyVals.setCharAt(index + 2, (char) (val + 0x100));
-                break;
+        if (index == -1) {
+            keyVals.append(keyTemp + (char) (val + 0x100));
+            size++;
+        } else {
+            keyVals.setCharAt(index + 2, (char) (val + 0x100));
         }
     }
 

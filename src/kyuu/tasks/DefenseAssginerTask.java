@@ -3,6 +3,7 @@ package kyuu.tasks;
 import aic2024.user.AstronautInfo;
 import aic2024.user.CarePackage;
 import aic2024.user.Direction;
+import aic2024.user.GameConstants;
 import kyuu.C;
 import kyuu.Vector2D;
 import kyuu.fast.FastIntIntMap;
@@ -54,7 +55,7 @@ public class DefenseAssginerTask extends Task {
             }
 
             if (uc.getStructureInfo().getOxygen() < 11) {
-                c.logger.log("Danger: HQ is threatened but not enough oxygen!");
+                c.logger.log("Danger: Base is threatened but not enough oxygen!");
                 return;
             }
             int enemyStrength = 1;
@@ -121,8 +122,10 @@ public class DefenseAssginerTask extends Task {
         if (dist > 35) {
             return;
         }
-        int nearestHqIdx = Vector2D.getNearest(alert.target, rdb.hqLocs, rdb.hqCount);
-        if (nearestHqIdx != rdb.hqIdx) {
+        // todo: currently settlements are not involved in early defense, incorporate them somehow
+        //       could be some kind of interception logic
+        int nearestBaseIdx = Vector2D.getNearest(alert.target, rdb.baseLocs, Math.min(rdb.baseCount, dc.MAX_HQ));
+        if (nearestBaseIdx != rdb.baseIdx) {
             if (dist < 5) {
                 alert.enemyStrength /= 2;
             } else {
