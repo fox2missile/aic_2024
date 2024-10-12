@@ -119,6 +119,7 @@ public class DbConst {
     public final int MSG_ID_MASK_DOME_BUILT = 0x09000000;
     public final int MSG_ID_MASK_DOME_DESTROYED = 0x0A000000;
     public final int MSG_ID_MASK_EXPANSION_MISSED = 0x0B000000;
+    public final int MSG_ID_MASK_GET_PACKAGES_FAILED = 0x0C000000;
 
     // common maskers
     public final int MASKER_LOC_X = 0x00FF0000;
@@ -155,4 +156,5 @@ public class DbConst {
     public final int MSG_ID_SETTLEMENT_CMD = MSG_ID_BEGIN - 24;
     public final int MSG_ID_BASE_HEARTBEAT = MSG_ID_BEGIN - 25;
     public final int MSG_ID_NEW_SETTLEMENT = MSG_ID_BEGIN - 26;
+    public final int MSG_ID_GET_PACKAGES_FAILED = MSG_ID_BEGIN - 27;
 }

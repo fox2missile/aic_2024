@@ -83,7 +83,7 @@ public class ExpansionWorkerTask extends Task {
         if (c.remainingSteps() < 5 || reachedTarget) {
             paxRetrievalTask.run();
         }
-        if (c.destination != null && c.remainingSteps() < 10) {
+        if (c.destination == null && c.remainingSteps() < 10) {
             nearbyPaxRetrievalTask.run();
         }
 

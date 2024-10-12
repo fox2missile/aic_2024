@@ -38,7 +38,6 @@ public class AstronautTask extends Task {
         scanSectorTask = new ScanSectorTask(c);
         retrievePaxTask = new RetrievePackageTask(c);
         rdb.subscribeEnemyHq = true;
-        rdb.subscribePackageRetrievalCommand = true;
         rdb.subscribeSurveyCommand = true;
         rdb.subscribeExpansionCommand = true;
         rdb.subscribeDefenseCommand = true;
@@ -128,6 +127,14 @@ public class AstronautTask extends Task {
                 latestDomeBuiltNotification = notif;
             }
         };
+
+        rdb.retrievePackageCommandReceiver = (int __) -> {
+            if (c.id == uc.pollBroadcast().getMessage()) {
+                currentRetPaxCmd = new RetrievePackageCommand(new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage()));
+            } else {
+                uc.eraseBroadcastBuffer(dc.MSG_SIZE_GET_PACKAGES_CMD - 1); // -1 ID
+            }
+        };
     }
 
     @Override
@@ -155,8 +162,6 @@ public class AstronautTask extends Task {
                         currentSymmetryCmd = null;
                     }
                 }
-            } else if (msg instanceof RetrievePackageCommand) {
-                currentRetPaxCmd = (RetrievePackageCommand) msg;
             } else if (msg instanceof DefenseCommand) {
                 currentDefTask = new DefenseTask(c, (DefenseCommand) msg);
             } else if (msg instanceof SurveyCommand) {
@@ -333,9 +338,15 @@ public class AstronautTask extends Task {
         if (c.loc.distanceSquared(currentRetPaxCmd.target) <= c.actionRange && uc.canPerformAction(ActionType.RETRIEVE, c.loc.directionTo(currentRetPaxCmd.target), 1)) {
             uc.performAction(ActionType.RETRIEVE, c.loc.directionTo(currentRetPaxCmd.target), 1);
             currentRetPaxCmd = null;
+            return true;
         } else {
             c.destination = currentRetPaxCmd.target;
         }
+
+        if (c.remainingSteps() <= 1) {
+            rdb.sendGetPackageFailedMessage(currentRetPaxCmd.target);
+        }
+
         return true;
     }
 
