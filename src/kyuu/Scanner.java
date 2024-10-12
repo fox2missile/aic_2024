@@ -188,8 +188,7 @@ public class Scanner {
     }
 
     public boolean hasObstacle(Location loc) {
-        MapObject obj = c.uc.senseObjectAtLocation(loc);
-        return c.isObstacle(obj);
+        return c.isObstacle(uc.senseTileType(loc));
     }
 
     public boolean isReachableDirectly(Location target) {
@@ -200,17 +199,17 @@ public class Scanner {
         for (int i = c.visionRangeStep; i != 0 && !currentLoc.equals(target); i--) {
             Direction dir = currentLoc.directionTo(target);
             Location next = currentLoc.add(dir);
-            if (uc.canSenseLocation(next) && !c.isObstacle(uc.senseObjectAtLocation(next))) {
+            if (uc.canSenseLocation(next) && !c.isObstacle(uc.senseTileType(next))) {
                 currentLoc = next;
                 continue;
             }
             next = currentLoc.add(dir.rotateLeft());
-            if (uc.canSenseLocation(next) && !c.isObstacle(uc.senseObjectAtLocation(next))) {
+            if (uc.canSenseLocation(next) && !c.isObstacle(uc.senseTileType(next))) {
                 currentLoc = next;
                 continue;
             }
             next = currentLoc.add(dir.rotateRight());
-            if (uc.canSenseLocation(next) && !c.isObstacle(uc.senseObjectAtLocation(next))) {
+            if (uc.canSenseLocation(next) && !c.isObstacle(uc.senseTileType(next))) {
                 currentLoc = next;
                 continue;
             }

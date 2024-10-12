@@ -29,7 +29,7 @@ public class JumpStrategyTask extends Task {
         for (Direction dir: c.fourDirs) {
             Location check = c.loc.add(dir);
 
-            while (uc.canSenseLocation(check) && !c.isObstacle(uc.senseObjectAtLocation(check))) {
+            while (uc.canSenseLocation(check) && !c.isObstacle(uc.senseTileType(check))) {
                 check = check.add(dir);
             }
             Location candidate = check.add(dir.opposite());
@@ -38,7 +38,7 @@ public class JumpStrategyTask extends Task {
                 continue;
             }
 
-            for (int j = 0; j < GameConstants.MAX_JUMP - 1 && uc.canSenseLocation(check) && c.isObstacle(uc.senseObjectAtLocation(check)); j++) {
+            for (int j = 0; j < GameConstants.MAX_JUMP - 1 && uc.canSenseLocation(check) && c.isObstacle(uc.senseTileType(check)); j++) {
                 check = check.add(dir);
             }
 
@@ -51,7 +51,7 @@ public class JumpStrategyTask extends Task {
         for (Direction dir: c.diagonalDirs) {
             Location check = c.loc.add(dir);
 
-            while (uc.canSenseLocation(check) && !c.isObstacle(uc.senseObjectAtLocation(check))) {
+            while (uc.canSenseLocation(check) && !c.isObstacle(uc.senseTileType(check))) {
                 check = check.add(dir);
             }
             Location candidate = check.add(dir.opposite());
@@ -63,7 +63,7 @@ public class JumpStrategyTask extends Task {
             for (Direction jumpDir: new Direction[]{dir.rotateRight(), dir.rotateLeft()}) {
                 Location checkJump = candidate.add(jumpDir);
                 int j;
-                for (j = 0; j < GameConstants.MAX_JUMP - 1 && uc.canSenseLocation(checkJump) && c.isObstacle(uc.senseObjectAtLocation(checkJump)); j++) {
+                for (j = 0; j < GameConstants.MAX_JUMP - 1 && uc.canSenseLocation(checkJump) && c.isObstacle(uc.senseTileType(checkJump)); j++) {
                     checkJump = checkJump.add(dir);
                 }
 
@@ -86,7 +86,7 @@ public class JumpStrategyTask extends Task {
         for (Direction dir: enemyHqDirs) {
             Location check = c.loc.add(dir);
 
-            while (uc.canSenseLocation(check) && !c.isObstacle(uc.senseObjectAtLocation(check))) {
+            while (uc.canSenseLocation(check) && !c.isObstacle(uc.senseTileType(check))) {
                 check = check.add(dir);
             }
             Location candidate = check.add(dir.opposite());
@@ -95,7 +95,7 @@ public class JumpStrategyTask extends Task {
                 continue;
             }
 
-            for (int j = 0; j < GameConstants.MAX_JUMP - 1 && uc.canSenseLocation(check) && c.isObstacle(uc.senseObjectAtLocation(check)); j++) {
+            for (int j = 0; j < GameConstants.MAX_JUMP - 1 && uc.canSenseLocation(check) && c.isObstacle(uc.senseTileType(check)); j++) {
                 check = check.add(dir);
             }
 
@@ -108,7 +108,7 @@ public class JumpStrategyTask extends Task {
         for (Direction dir: c.diagonalDirs) {
             Location check = c.loc.add(dir);
 
-            while (uc.canSenseLocation(check) && !c.isObstacle(uc.senseObjectAtLocation(check))) {
+            while (uc.canSenseLocation(check) && !c.isObstacle(uc.senseTileType(check))) {
                 check = check.add(dir);
             }
             Location candidate = check.add(dir.opposite());
@@ -120,7 +120,7 @@ public class JumpStrategyTask extends Task {
             for (Direction jumpDir: new Direction[]{dir.rotateRight(), dir.rotateLeft()}) {
                 Location checkJump = candidate.add(jumpDir);
                 int j;
-                for (j = 0; j < GameConstants.MAX_JUMP - 1 && uc.canSenseLocation(checkJump) && c.isObstacle(uc.senseObjectAtLocation(checkJump)); j++) {
+                for (j = 0; j < GameConstants.MAX_JUMP - 1 && uc.canSenseLocation(checkJump) && c.isObstacle(uc.senseTileType(checkJump)); j++) {
                     checkJump = checkJump.add(dir);
                 }
 

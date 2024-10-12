@@ -70,7 +70,7 @@ public class Expansion {
                 boolean saved = false;
                 for (int j = 0; j < 3; j++) {
                     c.rdb.expansionSites[id][i] = expansionLoc.add(dir.dx * (10 - j), dir.dy * (10 - j));
-                    if (!c.uc.isOutOfMap(c.rdb.expansionSites[id][i]) && !(c.uc.canSenseLocation(c.rdb.expansionSites[id][i]) && c.isObstacle(c.uc.senseObjectAtLocation(c.rdb.expansionSites[id][i])))) {
+                    if (!c.uc.isOutOfMap(c.rdb.expansionSites[id][i]) && !(c.uc.canSenseLocation(c.rdb.expansionSites[id][i]) && c.isObstacle(c.uc.senseTileType(c.rdb.expansionSites[id][i])))) {
                         saved = true;
                         break;
                     }

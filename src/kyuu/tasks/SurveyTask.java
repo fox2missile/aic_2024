@@ -61,10 +61,10 @@ public class SurveyTask extends Task {
         if (dist > 3) {
             // still far away from current target, nothing to check
             return;
-        } else if (uc.canSenseLocation(cmd.target) && c.isObstacle(uc.senseObjectAtLocation(cmd.target))) { // remember: dist <= 3
+        } else if (uc.canSenseLocation(cmd.target) && c.isObstacle(uc.senseTileType(cmd.target))) { // remember: dist <= 3
             for (Direction dir: c.getFirstDirs(cmd.target.directionTo(c.loc))) {
                 Location alt = cmd.target.add(dir);
-                if (uc.canSenseLocation(alt) && !c.isObstacle(uc.senseObjectAtLocation(alt))) {
+                if (uc.canSenseLocation(alt) && !c.isObstacle(uc.senseTileType(alt))) {
                     c.destination = alt;
                     currentTarget = alt;
                     cmd.target = alt;

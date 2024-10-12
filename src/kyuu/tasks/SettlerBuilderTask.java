@@ -65,7 +65,7 @@ public class SettlerBuilderTask extends SettlerTask {
             c.destination = cmd.target;
         }
 
-        if (c.loc.equals(cmd.target) || (uc.canSenseLocation(cmd.target) && c.isObstacle(uc.senseObjectAtLocation(cmd.target)) && Vector2D.chebysevDistance(c.loc, cmd.target) <= 3)) {
+        if (c.loc.equals(cmd.target) || (uc.canSenseLocation(cmd.target) && c.isObstacle(uc.senseTileType(cmd.target)) && Vector2D.chebysevDistance(c.loc, cmd.target) <= 3)) {
             buildSettlementNow();
         }
     }

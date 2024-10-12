@@ -19,7 +19,7 @@ public class EnlistAttackersTask extends Task {
         maxReinforcedSuits = 0;
         for (Direction dir: c.allDirs) {
             Location check = c.loc.add(dir);
-            if (!uc.isOutOfMap(check) && uc.canSenseLocation(check) && !c.isObstacle(uc.senseObjectAtLocation(check))) {
+            if (!uc.isOutOfMap(check) && uc.canSenseLocation(check) && !c.isObstacle(uc.senseTileType(check))) {
                 maxReinforcedSuits++;
             }
         }
