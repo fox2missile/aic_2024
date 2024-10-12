@@ -61,7 +61,7 @@ public class Expansion {
             }
 
             int mapMagnitude = Math.max(c.uc.getMapWidth(), c.uc.getMapHeight());
-            boolean parentCheck = parent != null;
+            boolean parentCheck = parent == null;
             if (mapMagnitude > 35) {
                 parentCheck = true;
             }
