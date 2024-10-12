@@ -274,6 +274,15 @@ public class C {
         };
     }
 
+    public Direction[] getFirstFourDirs(Direction first) {
+        if (Math.abs(first.dx) + Math.abs(first.dy) == 2) {
+            first = first.rotateRight();
+        }
+        return new Direction[]{
+                first, first.rotateRight().rotateRight(), first.rotateLeft().rotateLeft(), first.opposite(),
+        };
+    }
+
     public Location mirrorHorizontal(Location loc) {
         return new Location(loc.x, mapHeight - loc.y - 1);
     }

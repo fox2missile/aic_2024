@@ -26,7 +26,7 @@ public class JumpStrategyTask extends Task {
     }
 
     private void planJumps() {
-        for (Direction dir: c.allDirs) {
+        for (Direction dir: c.fourDirs) {
             Location check = c.loc.add(dir);
 
             while (uc.canSenseLocation(check) && !c.isObstacle(uc.senseObjectAtLocation(check))) {
@@ -48,13 +48,40 @@ public class JumpStrategyTask extends Task {
 
             needJumps[needJumpsLength++] = candidate;
         }
+        for (Direction dir: c.diagonalDirs) {
+            Location check = c.loc.add(dir);
+
+            while (uc.canSenseLocation(check) && !c.isObstacle(uc.senseObjectAtLocation(check))) {
+                check = check.add(dir);
+            }
+            Location candidate = check.add(dir.opposite());
+
+            if (!uc.canSenseLocation(check)) {
+                continue;
+            }
+
+            for (Direction jumpDir: new Direction[]{dir.rotateRight(), dir.rotateLeft()}) {
+                Location checkJump = candidate.add(jumpDir);
+                int j;
+                for (j = 0; j < GameConstants.MAX_JUMP - 1 && uc.canSenseLocation(checkJump) && c.isObstacle(uc.senseObjectAtLocation(checkJump)); j++) {
+                    checkJump = checkJump.add(dir);
+                }
+
+                if (j == 0 || uc.isOutOfMap(checkJump.add(dir.dx * 3, dir.dy * 3)) || !uc.canSenseLocation(checkJump)) {
+                    continue;
+                }
+
+                needJumps[needJumpsLength++] = candidate;
+                break;
+            }
+        }
     }
 
     private void planJumpsAdjustEnemyHq() {
         needJumpsLength = 0;
         int nearestEnemyHqIdx = Vector2D.getNearestChebysev(c.loc, rdb.enemyHq, rdb.enemyHqSize);
 
-        Direction[] enemyHqDirs = c.getFirstDirs(c.loc.directionTo(rdb.enemyHq[nearestEnemyHqIdx]));
+        Direction[] enemyHqDirs = c.getFirstFourDirs(c.loc.directionTo(rdb.enemyHq[nearestEnemyHqIdx]));
 
         for (Direction dir: enemyHqDirs) {
             Location check = c.loc.add(dir);
@@ -77,6 +104,33 @@ public class JumpStrategyTask extends Task {
             }
 
             needJumps[needJumpsLength++] = candidate;
+        }
+        for (Direction dir: c.diagonalDirs) {
+            Location check = c.loc.add(dir);
+
+            while (uc.canSenseLocation(check) && !c.isObstacle(uc.senseObjectAtLocation(check))) {
+                check = check.add(dir);
+            }
+            Location candidate = check.add(dir.opposite());
+
+            if (!uc.canSenseLocation(check)) {
+                continue;
+            }
+
+            for (Direction jumpDir: new Direction[]{dir.rotateRight(), dir.rotateLeft()}) {
+                Location checkJump = candidate.add(jumpDir);
+                int j;
+                for (j = 0; j < GameConstants.MAX_JUMP - 1 && uc.canSenseLocation(checkJump) && c.isObstacle(uc.senseObjectAtLocation(checkJump)); j++) {
+                    checkJump = checkJump.add(dir);
+                }
+
+                if (j == 0 || uc.isOutOfMap(checkJump.add(dir.dx * 3, dir.dy * 3)) || !uc.canSenseLocation(checkJump)) {
+                    continue;
+                }
+
+                needJumps[needJumpsLength++] = candidate;
+                break;
+            }
         }
     }
 
