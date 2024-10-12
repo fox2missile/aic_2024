@@ -51,10 +51,11 @@ public class HeadquarterTask extends Task {
             Location settlementLoc = idxBroadcast.getLocation();
             int idx = idxBroadcast.getMessage();
             if (rdb.baseLocs[idx] != null) {
-                c.logger.log("warning: inconsistencies");
+                c.logger.log("a base had died and a new settlement is taking the idx");
+            } else {
+                rdb.baseCount++;
             }
             rdb.baseLocs[idx] = settlementLoc;
-            rdb.baseCount++;
             c.logger.log("New settlement at %s", settlementLoc);
 
             // todo: transfer all the expansion to the settlement

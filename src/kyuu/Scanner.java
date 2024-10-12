@@ -45,11 +45,11 @@ public class Scanner {
         visibleEnemies = new FastIntIntMap();
         visibleEnemiesValid = false;
         prevLoc = c.loc;
+        defaultAvailableEnlistSlot = getRealtimeAvailableEnlistSlot();
     }
 
     public void initAvailableEnlistSlot() {
         c.ldb.availableEnlistSlot = getRealtimeAvailableEnlistSlot();
-        defaultAvailableEnlistSlot = c.ldb.availableEnlistSlot;
     }
 
     public int getRealtimeAvailableEnlistSlot() {

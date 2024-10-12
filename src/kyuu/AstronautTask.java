@@ -521,6 +521,7 @@ public class AstronautTask extends Task {
                 }
             }
 
+            rdb.sendSuppressorHeartbeat();
         }
 
     }

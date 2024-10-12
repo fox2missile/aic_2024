@@ -33,6 +33,7 @@ public class RemoteDatabase extends Database {
     public MessageReceiver newSettlementReceiver;
     public MessageReceiver retrievePackageFailedReceiver;
     public MessageReceiver retrievePackageCommandReceiver;
+    public MessageReceiver suppressorHeartbeatReceiver;
     public boolean subscribeEnemyHq = false;
     public boolean subscribeDefenseCommand = false;
     public boolean subscribeSurveyCommand = false;
@@ -86,11 +87,11 @@ public class RemoteDatabase extends Database {
         return count;
     }
 
-    public int countNearbyRecentDangerSectors(Location loc, int lookback) {
+    public int countNearbyRecentDangerSectors(Location loc, int lookback, int stepDist) {
         int count = 0;
         for (Location sector: dangerSectors.getKeys()) {
             Location sectorCenter = c.getSectorCenter(sector);
-            if (loc.distanceSquared(sectorCenter) <= 8 * 8 && uc.getRound() - sectorLastDanger.getVal(sector) < lookback) {
+            if (loc.distanceSquared(sectorCenter) <= stepDist * stepDist && uc.getRound() - sectorLastDanger.getVal(sector) < lookback) {
                 count++;
             }
         }
@@ -133,10 +134,15 @@ public class RemoteDatabase extends Database {
             BroadcastInfo idxBroadcast = uc.pollBroadcast();
             int idx = idxBroadcast.getMessage();
             baseLocs[idx] = idxBroadcast.getLocation();
-            baseIdx = Math.max(idx + 1, baseIdx);
             baseCount++;
         };
         while (retrieveNextMessage() != null) {}
+        for (int i = 0; i < baseCount; i++) {
+            if (baseLocs[i] == null) {
+                baseIdx = i;
+                break;
+            }
+        }
         baseLocs[baseIdx] = c.loc;
         baseHeartbeatReceiver = null;
         uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_NEW_SETTLEMENT);
@@ -372,7 +378,11 @@ public class RemoteDatabase extends Database {
             } else if (msgId == dc.MSG_ID_GET_PACKAGES_FAILED) {
                 if (retrievePackageFailedReceiver != null) {
                     retrievePackageFailedReceiver.receive(fullMsg);
-                }
+                } // no payload
+            } else if (msgId == dc.MSG_ID_SUPPRESSOR_HEARTBEAT) {
+                if (suppressorHeartbeatReceiver != null) {
+                    suppressorHeartbeatReceiver.receive(b.getID());
+                } // no payload
             } else if (msgId == dc.MSG_ID_DEFENSE_CMD) {
                 if (subscribeDefenseCommand) {
                     if (c.id == uc.pollBroadcast().getMessage()) {
@@ -662,6 +672,10 @@ public class RemoteDatabase extends Database {
         uc.performAction(ActionType.BROADCAST, null, encoded);
     }
 
+    public void sendSuppressorHeartbeat() {
+        uc.performAction(ActionType.BROADCAST, null, 1);
+    }
+
     public void sendSurveyCompleteMsg(SurveyComplete msg) {
         int encoded = dc.MSG_ID_MASK_SURVEY_FAILED;
         if (msg.status == dc.SURVEY_BAD) {
@@ -779,6 +793,8 @@ public class RemoteDatabase extends Database {
             return dc.MSG_ID_BASE_HEARTBEAT;
         } else if (broadcasted == dc.MSG_ID_NEW_SETTLEMENT) {
             return dc.MSG_ID_NEW_SETTLEMENT;
+        } else if (broadcasted == dc.MSG_ID_SUPPRESSOR_HEARTBEAT) {
+            return dc.MSG_ID_SUPPRESSOR_HEARTBEAT;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_SURVEY_COMPLETE_GOOD) {
             return dc.MSG_ID_SURVEY_COMPLETE_GOOD;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_SURVEY_COMPLETE_BAD) {
