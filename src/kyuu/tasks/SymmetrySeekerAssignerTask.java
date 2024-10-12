@@ -24,7 +24,25 @@ public class SymmetrySeekerAssignerTask extends Task {
             Location loc = new Location((msg & dc.MASKER_LOC_X) >> dc.MASKER_LOC_X_SHIFT,
                     (msg & dc.MASKER_LOC_Y) >> dc.MASKER_LOC_Y_SHIFT);
             int status = msg & dc.SYMMETRIC_SEEKER_COMPLETE_STATUS_MASKER;
-            handleSeekSymmetryComplete(loc, status);
+            int symmetryMask = (msg & dc.SYMMETRIC_SEEKER_COMPLETE_SYMMETRY_MASKER) >> dc.SYMMETRIC_SEEKER_SYMMETRY_MASK_SHIFT;
+            if (status != dc.SYMMETRIC_SEEKER_COMPLETE_FOUND_SYMMETRY) {
+                handleSeekSymmetryComplete(loc, status);
+                return;
+            }
+            boolean horizontalSymmetryPossible = (symmetryMask & (1 << dc.SYMMETRY_HORIZONTAL)) == (1 << dc.SYMMETRY_HORIZONTAL);
+            boolean verticalSymmetryPossible = (symmetryMask & (1 << dc.SYMMETRY_VERTICAL)) == (1 << dc.SYMMETRY_VERTICAL);
+            boolean rotationalSymmetryPossible = (symmetryMask & (1 << dc.SYMMETRY_ROTATIONAL)) == (1 << dc.SYMMETRY_ROTATIONAL);
+            if (ldb.horizontalSymmetryPossible && !horizontalSymmetryPossible) {
+                ldb.horizontalSymmetryPossible = false;
+            }
+            if (ldb.verticalSymmetryPossible && !verticalSymmetryPossible) {
+                ldb.verticalSymmetryPossible = false;
+            }
+
+            if (ldb.rotationalSymmetryPossible && !rotationalSymmetryPossible) {
+                ldb.rotationalSymmetryPossible = false;
+            }
+            checkSymmetryNow();
         };
         rdb.seekSymmetryCommandReceiver = (int __) -> {
             uc.pollBroadcast(); // target ID
@@ -142,10 +160,10 @@ public class SymmetrySeekerAssignerTask extends Task {
                 StructureInfo s = uc.senseStructure(ldb.symmetryCandidates[i]);
                 if (s != null && s.getType() == StructureType.HQ && s.getTeam() != c.team) {
                     handleSeekSymmetryComplete(i, dc.SYMMETRIC_SEEKER_COMPLETE_FOUND_HQ);
-                    rdb.sendSeekSymmetryCompleteMsg(new SeekSymmetryComplete(ldb.symmetryCandidates[i], dc.SYMMETRIC_SEEKER_COMPLETE_FOUND_HQ));
+                    rdb.sendSeekSymmetryCompleteMsg(new SeekSymmetryComplete(ldb.symmetryCandidates[i], dc.SYMMETRIC_SEEKER_COMPLETE_FOUND_HQ, ldb.horizontalSymmetryPossible, ldb.verticalSymmetryPossible, ldb.rotationalSymmetryPossible));
                 } else {
                     handleSeekSymmetryComplete(i, dc.SYMMETRIC_SEEKER_COMPLETE_FOUND_NOTHING);
-                    rdb.sendSeekSymmetryCompleteMsg(new SeekSymmetryComplete(ldb.symmetryCandidates[i], dc.SYMMETRIC_SEEKER_COMPLETE_FOUND_NOTHING));
+                    rdb.sendSeekSymmetryCompleteMsg(new SeekSymmetryComplete(ldb.symmetryCandidates[i], dc.SYMMETRIC_SEEKER_COMPLETE_FOUND_NOTHING, ldb.horizontalSymmetryPossible, ldb.verticalSymmetryPossible, ldb.rotationalSymmetryPossible));
                 }
             }
         }
@@ -200,19 +218,26 @@ public class SymmetrySeekerAssignerTask extends Task {
             } else {
                 ldb.rotationalSymmetryPossible = false;
             }
-            if (ldb.horizontalSymmetryPossible && !ldb.verticalSymmetryPossible && !ldb.rotationalSymmetryPossible) {
-                handleSymmetryFound(dc.SYMMETRY_HORIZONTAL);
-                return;
-            } else if (!ldb.horizontalSymmetryPossible && ldb.verticalSymmetryPossible && !ldb.rotationalSymmetryPossible) {
-                handleSymmetryFound(dc.SYMMETRY_VERTICAL);
-                return;
-            } else if (!ldb.horizontalSymmetryPossible && !ldb.verticalSymmetryPossible && ldb.rotationalSymmetryPossible) {
-                handleSymmetryFound(dc.SYMMETRY_ROTATIONAL);
+            if (checkSymmetryNow()) {
                 return;
             }
             c.logger.log("current symmetry: horizontalSymmetryPossible %s | verticalSymmetryPossible %s | rotationalSymmetryPossible %s",
                     ldb.horizontalSymmetryPossible, ldb.verticalSymmetryPossible, ldb.rotationalSymmetryPossible);
         }
+    }
+
+    private boolean checkSymmetryNow() {
+        if (ldb.horizontalSymmetryPossible && !ldb.verticalSymmetryPossible && !ldb.rotationalSymmetryPossible) {
+            handleSymmetryFound(dc.SYMMETRY_HORIZONTAL);
+            return true;
+        } else if (!ldb.horizontalSymmetryPossible && ldb.verticalSymmetryPossible && !ldb.rotationalSymmetryPossible) {
+            handleSymmetryFound(dc.SYMMETRY_VERTICAL);
+            return true;
+        } else if (!ldb.horizontalSymmetryPossible && !ldb.verticalSymmetryPossible && ldb.rotationalSymmetryPossible) {
+            handleSymmetryFound(dc.SYMMETRY_ROTATIONAL);
+            return true;
+        }
+        return false;
     }
 
     private void handleSymmetryFound(int symmetryId) {
