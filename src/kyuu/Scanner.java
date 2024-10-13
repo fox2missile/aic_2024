@@ -1,6 +1,9 @@
 package kyuu;
 
 import aic2024.user.*;
+import kyuu.db.Database;
+import kyuu.db.LocalDatabase;
+import kyuu.db.RemoteDatabase;
 import kyuu.fast.FastIntIntMap;
 import kyuu.fast.FastLocSet;
 import kyuu.message.AlertMessage;
@@ -33,9 +36,14 @@ public class Scanner {
     public boolean allyHqNearby;
     public Location nearestEnemyStructure;
 
+    RemoteDatabase rdb;
+    LocalDatabase ldb;
+
     public Scanner(C c) {
         this.c = c;
         this.uc = c.uc;
+        this.rdb = c.rdb;
+        this.ldb = c.ldb;
         this.obstaclesLength = 0;
         this.obstacles = new MapObjectLocation[200];
         for (int i = 0; i < 100; i++) this.obstacles[i] = new MapObjectLocation();
@@ -379,5 +387,26 @@ public class Scanner {
         bestEstimate = (int) (bestEstimate / (1 - error));
 
         return bestEstimate;
+    }
+
+    public int estimateNearestEnemyHqDist() {
+        if (rdb.enemyHqSize > 0) {
+            Location nearestEnemyHq = rdb.enemyHq[Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize)];
+            return (int) Math.sqrt(c.loc.distanceSquared(nearestEnemyHq));
+        } else {
+            int nearestEstDist = Integer.MAX_VALUE;
+            if (ldb.symmetryCandidates == null) {
+                return nearestEstDist;
+            }
+            for (int i = 0; i < ldb.symmetryCandidates.length; i++) {
+                if (!ldb.symmetryComplete[i]) {
+                    int dist = (int) Math.sqrt(c.loc.distanceSquared(ldb.symmetryCandidates[i]));
+                    if (dist < nearestEstDist) {
+                        nearestEstDist = dist;
+                    }
+                }
+            }
+            return nearestEstDist;
+        }
     }
 }

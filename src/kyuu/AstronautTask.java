@@ -23,6 +23,7 @@ public class AstronautTask extends Task {
     Task currentSurveyTask;
     Task currentExpansionWorkerTask;
     Task plantsGatheringTask;
+    Task settlementPaxTask;
     Task currentSettlerTask;
     Task currentSymmetryTask;
     Direction spawnDir;
@@ -35,6 +36,7 @@ public class AstronautTask extends Task {
         super(c);
         moveTask = new MoveTask(c);
         plantsGatheringTask = RetrievePackageTask.createPlantsGatheringTask(c);
+        settlementPaxTask = RetrievePackageTask.createSettlementPaxGatheringTask(c);
         scanSectorTask = new ScanSectorTask(c);
         retrievePaxTask = new RetrievePackageTask(c);
         rdb.subscribeEnemyHq = true;
@@ -84,6 +86,7 @@ public class AstronautTask extends Task {
                 }
                 uc.eraseBroadcastBuffer(2 * (dc.MAX_EXPANSION_DEPTH - pathSize));
                 currentBuildDomeTask = new BuildDomeTask(c, new BuildDomeCommand(target, expansionId, path));
+                currentDefTask = null;
             } else {
                 uc.eraseBroadcastBuffer(dc.MSG_SIZE_BUILD_DOME_CMD - 1); // -1 ID
             }
@@ -105,6 +108,7 @@ public class AstronautTask extends Task {
                 } else {
                     currentSettlerTask = new SettlerOxygenTask(c, cmd);
                 }
+                currentDefTask = null;
             } else {
                 uc.eraseBroadcastBuffer(dc.MSG_SIZE_SETTLEMENT_CMD - 1); // -1 ID
             }
@@ -160,7 +164,7 @@ public class AstronautTask extends Task {
             } else if (msg instanceof SurveyCommand) {
                 currentSurveyTask = new SurveyTask(c, (SurveyCommand) msg, plantsGatheringTask);
             } else if (msg instanceof ExpansionCommand) {
-                currentExpansionWorkerTask = new ExpansionWorkerTask(c, ((ExpansionCommand) msg), retrievePaxTask, plantsGatheringTask);
+                currentExpansionWorkerTask = new ExpansionWorkerTask(c, ((ExpansionCommand) msg), retrievePaxTask, plantsGatheringTask, settlementPaxTask);
             } else if (msg instanceof BuildHyperJumpCommand) {
                 currentBuildHyperJumpCmd = (BuildHyperJumpCommand) msg;
             }
@@ -295,9 +299,14 @@ public class AstronautTask extends Task {
             moveDir = c.loc.directionTo(rdb.enemyHq[nearestEnemyHqIdx]);
         }
 
-        c.destination = c.loc.add(moveDir);
 
-        plantsGatheringTask.run();
+        settlementPaxTask.run();
+        if (c.destination == null) {
+            plantsGatheringTask.run();
+        }
+        if (c.destination == null) {
+            c.destination = c.loc.add(moveDir);
+        }
         if (c.destination != null && uc.getRound() > 300) {
             retrievePaxTask.run();
         }
@@ -384,7 +393,8 @@ public class AstronautTask extends Task {
         c.destination = null;
         Location target = cmd.target;
 
-        if (uc.getRound() < 350) {
+        settlementPaxTask.run();
+        if (c.destination == null && uc.getRound() < 500) {
             plantsGatheringTask.run();
         }
         if (c.destination != null) {

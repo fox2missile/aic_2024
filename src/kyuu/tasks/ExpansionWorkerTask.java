@@ -15,6 +15,7 @@ public class ExpansionWorkerTask extends Task {
     Task nearbyPaxRetrievalTask;
     Direction expansionDirection;
     Task plantsGatheringTask;
+    Task settlementPaxTask;
 
     boolean reachedTarget;
 
@@ -23,7 +24,7 @@ public class ExpansionWorkerTask extends Task {
     Location currentTarget;
 
 
-    public ExpansionWorkerTask(C c, ExpansionCommand cmd, Task paxRetrievalTask, Task plantsGatheringTask) {
+    public ExpansionWorkerTask(C c, ExpansionCommand cmd, Task paxRetrievalTask, Task plantsGatheringTask, Task settlementPaxTask) {
         super(c);
         for (Direction dir: c.allDirs) {
             if (uc.canSenseLocation(c.loc.add(dir)) && uc.senseStructures(c.actionRange, c.team) != null) {
@@ -36,6 +37,7 @@ public class ExpansionWorkerTask extends Task {
         this.nearbyPaxRetrievalTask = RetrievePackageTask.createNearbyPackageTask(c);
         this.cmd = cmd;
         this.reachedTarget = false;
+        this.settlementPaxTask = settlementPaxTask;
 
         if (cmd.sources.length >= 2) {
             this.currentTarget = cmd.sources[1];
@@ -48,8 +50,11 @@ public class ExpansionWorkerTask extends Task {
 
     @Override
     public void run() {
-        if (uc.senseStructures(c.visionRange, c.team).length == 0 && uc.getRound() < 500) {
-            plantsGatheringTask.run();
+        if (uc.senseStructures(c.visionRange, c.team).length == 0) {
+            settlementPaxTask.run();
+            if (uc.getRound() < 500 && c.destination == null) {
+                plantsGatheringTask.run();
+            }
             if (c.destination != null) {
                 return;
             }

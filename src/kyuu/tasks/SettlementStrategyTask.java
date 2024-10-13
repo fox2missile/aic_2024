@@ -108,10 +108,12 @@ public class SettlementStrategyTask extends Task {
                 }
 
                 if (nearestEnemyHq != null) {
-                    score += (60 / Vector2D.chebysevDistance(ex.expansionLoc, nearestEnemyHq));
+                    score += (60 / Vector2D.chebysevDistance(rdb.expansionSites[ex.id][i], nearestEnemyHq));
                 }
 
-                score -= (10 * (ex.depth + 1));
+                score += Vector2D.chebysevDistance(rdb.expansionSites[ex.id][i], c.loc);
+
+                score += (10 * (ex.depth + 1));
 
                 if (score > bestScore) {
                     bestEdge = new ExpansionEdge(ex, i);

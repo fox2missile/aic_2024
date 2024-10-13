@@ -15,8 +15,8 @@ public class PackageAssignerTask extends Task {
 
     final int[] defaultScores = {
             100, //SETTLEMENT
-            2, //DOME
-            10, //HYPERJUMP
+            20, //DOME
+            40, //HYPERJUMP
             -1, //RADIO
             200, //REINFORCED_SUIT
             50, //SURVIVAL_KIT
