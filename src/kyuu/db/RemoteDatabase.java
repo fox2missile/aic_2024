@@ -3,6 +3,7 @@ package kyuu.db;
 import aic2024.user.*;
 import kyuu.C;
 import kyuu.Vector2D;
+import kyuu.fast.FastIntIntMap;
 import kyuu.fast.FastLocIntMap;
 import kyuu.fast.FastLocSet;
 import kyuu.message.*;
@@ -55,6 +56,10 @@ public class RemoteDatabase extends Database {
 
     private final FastLocIntMap knownAlertLocations;
     private final FastLocSet dangerSectors;
+    public final FastIntIntMap unitSpawnRounds;
+    public final FastLocIntMap sectorAvgDist;
+    public final FastLocIntMap sectorSumDist;
+    public final FastLocIntMap sectorDistReportCount;
     private final FastLocIntMap sectorLastDanger;
     public Deque<LocationRound> recentDangerSectors;
     public final int RECENT_DANGER_SECTOR_MAX = 7;
@@ -69,6 +74,10 @@ public class RemoteDatabase extends Database {
         dangerSectors = new FastLocSet();
         sectorLastDanger = new FastLocIntMap();
         recentDangerSectors = new ArrayDeque<>(RECENT_DANGER_SECTOR_MAX);
+        unitSpawnRounds = new FastIntIntMap();
+        sectorAvgDist = new FastLocIntMap();
+        sectorSumDist = new FastLocIntMap();
+        sectorDistReportCount = new FastLocIntMap();
         alertCount = 0;
     }
 
@@ -594,9 +603,28 @@ public class RemoteDatabase extends Database {
                     return new EnemyHqDestroyedMessage(loc);
                 } // no payload
             }
+            recordDistances(b);
             b = uc.pollBroadcast();
         }
         return null;
+    }
+
+    private void recordDistances(BroadcastInfo b) {
+        if (unitSpawnRounds.contains(b.getID())) {
+            Location reportSector = c.getSector(b.getLocation());
+            int roundDist = uc.getRound() - unitSpawnRounds.getVal(b.getID());
+            int count = 1;
+            int sumDist = roundDist;
+            if (sectorDistReportCount.contains(reportSector)) {
+                count += sectorDistReportCount.getVal(reportSector);
+                sumDist += sectorSumDist.getVal(reportSector);
+            }
+            sectorDistReportCount.addReplace(reportSector, count);
+            sectorSumDist.addReplace(reportSector, sumDist);
+            int avg = sumDist / count;
+            sectorAvgDist.addReplace(reportSector, avg);
+            c.loggerAlways.log("Estimated dist to %s is %d rounds", b.getLocation(), avg);
+        }
     }
 
     public void resetEnemyHq() {

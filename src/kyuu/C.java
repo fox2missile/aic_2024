@@ -15,9 +15,11 @@ public class C {
     public Team team;
     public Team opponent;
     public Logger logger;
+    public Logger loggerAlways;
     public Location destination = null;
     public int seed;
     public final int spawnRound;
+    public int steps;
     public final float visionRange;
     public final float visionRangeReduced1;
     public final float visionRangeReduced2;
@@ -108,11 +110,15 @@ public class C {
     public void move(Direction dir) {
         uc.performAction(ActionType.MOVE, dir, 1);
         loc = uc.getLocation();
+        steps++;
     }
 
-    public void enlistAstronaut(Direction dir, int oxygen, CarePackage pax) {
+    public int enlistAstronaut(Direction dir, int oxygen, CarePackage pax) {
         uc.enlistAstronaut(dir, oxygen, pax);
         ldb.availableEnlistSlot--;
+        int enlistId = uc.senseAstronaut(loc.add(dir)).getID();
+        rdb.unitSpawnRounds.addReplace(enlistId, uc.getRound() + 5);
+        return enlistId;
     }
 
     public Location getSectorOrigin(Location sector) {
@@ -246,6 +252,8 @@ public class C {
         } else {
             logger = new LoggerDummy();
         }
+        loggerAlways = new LoggerStandard(uc);
+
 
         mapWidth = uc.getMapWidth();
         mapHeight = uc.getMapHeight();
@@ -254,6 +262,7 @@ public class C {
         loc = uc.getLocation();
         startLoc = uc.getLocation();
         spawnRound = uc.getRound();
+        steps = 0;
         s = new Scanner(this);
 
         visionRange = uc.isStructure() ? (uc.getType() == StructureType.HQ ? 64 : 49) : 25;

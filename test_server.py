@@ -17,6 +17,7 @@ SERVER_ID_KEY = "server_id"
 random.seed(69)
 
 MATCH_SEEDS = [1234, 1111, 2222, 3333, 4444, 5555, 6969]
+MATCH_SEEDS.reverse()
 
 
 class TestServer:

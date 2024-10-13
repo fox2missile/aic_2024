@@ -36,15 +36,8 @@ public class FastIntIntMap {
     }
 
     public void addReplace(int key, int val) {
-        // String keyTemp = keyToStr(key);
-        String keyTemp = "^" + (char) (key + 0x100);
-        int index = keyVals.indexOf(keyTemp);
-        if (index == -1) {
-            keyVals.append(keyTemp + (char) (val + 0x100));
-            size++;
-        } else {
-            keyVals.setCharAt(index + 2, (char) (val + 0x100));
-        }
+        remove(key);
+        add(key, val);
     }
 
     public boolean contains(int key) {
