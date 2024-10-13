@@ -14,6 +14,7 @@ import java.util.Deque;
 public class RemoteDatabase extends Database {
 
     public Location[] baseLocs;
+    public int[] baseHeartbeats;
     public int baseCount;
     public Location[] enemyHq;
     public int enemyHqSize;
@@ -79,6 +80,7 @@ public class RemoteDatabase extends Database {
         sectorSumDist = new FastLocIntMap();
         sectorDistReportCount = new FastLocIntMap();
         alertCount = 0;
+        baseHeartbeats = new int[dc.MAX_BASES];
     }
 
     public boolean isKnownDangerousLocation(Location loc) {
@@ -135,6 +137,18 @@ public class RemoteDatabase extends Database {
         }
     }
 
+    public void listenToBaseHeartbeat() {
+        baseHeartbeatReceiver = (int __) -> {
+            BroadcastInfo idxBroadcast = uc.pollBroadcast();
+            int idx = idxBroadcast.getMessage();
+            baseHeartbeats[idx] = uc.getRound();
+        };
+    }
+
+    public boolean isBaseAlive(int idx) {
+        return uc.getRound() - baseHeartbeats[idx] < 5;
+    }
+
     public void introduceSettlement() {
         baseLocs = new Location[dc.MAX_BASES];
         baseIdx = 0;
@@ -156,6 +170,7 @@ public class RemoteDatabase extends Database {
         baseHeartbeatReceiver = null;
         uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_NEW_SETTLEMENT);
         uc.performAction(ActionType.BROADCAST, null, baseIdx);
+        listenToBaseHeartbeat();
     }
 
     public void sendBaseHeartbeat() {
@@ -180,6 +195,7 @@ public class RemoteDatabase extends Database {
         if (otherHqCount == 2) {
             baseLocs[(baseIdx + 2) % baseCount] = tempLocs[1];
         }
+        listenToBaseHeartbeat();
     }
 
     public void sendSymmetricSeekerCommand(int targetId, Location targetLoc) {
@@ -794,7 +810,8 @@ public class RemoteDatabase extends Database {
         encoded |= (msg.target.x << dc.MASKER_LOC_X_SHIFT);
         encoded |= (msg.target.y << dc.MASKER_LOC_Y_SHIFT);
         encoded |= msg.enemyStrength;
-        knownAlertLocations.add(msg.target, uc.getRound());
+        knownAlertLocations.addReplace(msg.target, uc.getRound());
+        uc.drawLineDebug(c.loc, msg.target, 255, 0, 0);
         uc.performAction(ActionType.BROADCAST, null, encoded);
     }
 

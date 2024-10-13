@@ -159,6 +159,10 @@ public class EnlistSuppressorsTask extends Task {
             return;
         }
 
+        if (uc.getStructureInfo().getType() == StructureType.SETTLEMENT) {
+            minSuppressors = Math.min(minSuppressors, 2);
+        }
+
         int nearestEnemyHqIdx = Vector2D.getNearestChebysev(c.loc, rdb.enemyHq, rdb.enemyHqSize);
         Location enemyHq = rdb.enemyHq[nearestEnemyHqIdx];
 
@@ -184,9 +188,15 @@ public class EnlistSuppressorsTask extends Task {
                     continue;
                 }
                 if (Vector2D.chebysevDistance(check, rdb.baseLocs[j]) < 5) {
-                    c.logger.log("no need to pressure front because of forward base");
-                    uc.drawLineDebug(c.loc, rdb.baseLocs[j], 0, 255, 0);
-                    return;
+                    if (rdb.isBaseAlive(j)) {
+                        c.logger.log("no need to pressure front because of forward base");
+                        uc.drawLineDebug(c.loc, rdb.baseLocs[j], 0, 255, 0);
+                        return;
+                    } else {
+                        c.logger.log("forward base destroyed!");
+                        uc.drawLineDebug(c.loc, rdb.baseLocs[j], 255, 127, 0);
+                    }
+
                 }
             }
             enemyDir = check.directionTo(enemyHq);
