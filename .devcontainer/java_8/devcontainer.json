@@ -1,9 +1,9 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/java
 {
-	"name": "Java 8",
+	"name": "AI Coliseum",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "docker.io/eclipse/ubuntu_jdk8_x11:latest",
+	"image": "mcr.microsoft.com/vscode/devcontainers/base:0-ubuntu-20.04",
 
 	// Configure tool-specific properties.
 	"customizations": {
@@ -13,6 +13,13 @@
 			"extensions": [
 				"streetsidesoftware.code-spell-checker"
 			]
+		}
+	},
+
+	"features": {
+		"ghcr.io/devcontainers-contrib/features/ant-sdkman:2": {
+			"jdkVersion": 8,
+			"jdkDistro": "tem"
 		}
 	}
 
