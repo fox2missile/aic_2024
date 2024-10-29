@@ -20,6 +20,9 @@
 		"ghcr.io/devcontainers-contrib/features/ant-sdkman:2": {
 			"jdkVersion": 8,
 			"jdkDistro": "tem"
+		},
+		"ghcr.io/devcontainers-contrib/features/gradle-sdkman:2": {
+			"jdkVersion": "none",
 		}
 	}
 
