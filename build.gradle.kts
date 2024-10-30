@@ -25,5 +25,5 @@ dependencies {
 }
 
 application {
-    mainClass = "kyuu.fast.CircularLocBuffer"
+    mainClass = "kyuu.fast.PriorityQueue"
 }
