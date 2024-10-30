@@ -8,6 +8,7 @@ logs/
 out/
 env/
 src/*_v*/
+gradle/
 
 build.defaults
 build.xml
