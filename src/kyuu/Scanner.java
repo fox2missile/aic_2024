@@ -45,7 +45,12 @@ public class Scanner {
         visibleEnemies = new FastIntIntMap();
         visibleEnemiesValid = false;
         prevLoc = c.loc;
-        defaultAvailableEnlistSlot = getRealtimeAvailableEnlistSlot();
+        defaultAvailableEnlistSlot = 0;
+        for (Direction dir: c.allDirs) {
+            if (!hasObstacle(c.loc.add(dir))) {
+                defaultAvailableEnlistSlot++;
+            }
+        }
     }
 
     public void initAvailableEnlistSlot() {
@@ -343,5 +348,36 @@ public class Scanner {
                 }
             }
         }
+    }
+
+    public int estimateStepDistance(Location target) {
+        int euclideanDist2 = c.loc.distanceSquared(target);
+        int euclideanDist = (int) Math.sqrt(euclideanDist2);
+        if (euclideanDist < 2) {
+            return euclideanDist;
+        }
+        int nearestReportDist2 = Integer.MAX_VALUE;
+        int bestEstimate = -1;
+        Location bestReference = null;
+
+        for (Location sector: c.rdb.sectorAvgDist.getKeys()) {
+            Location check = c.getSectorCenter(sector);
+            int checkDist2 = check.distanceSquared(target);
+            if (checkDist2 < euclideanDist2 && checkDist2 < nearestReportDist2) {
+                nearestReportDist2 = checkDist2;
+                bestEstimate = c.rdb.sectorAvgDist.getVal(sector);
+                bestReference = check;
+            }
+        }
+
+        if (bestReference == null) {
+            return euclideanDist;
+        }
+
+        int nearestReportDist = (int) Math.sqrt(nearestReportDist2);
+        double error = (double) nearestReportDist / (double) euclideanDist;
+        bestEstimate = (int) (bestEstimate / (1 - error));
+
+        return bestEstimate;
     }
 }
