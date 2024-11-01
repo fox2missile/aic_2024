@@ -80,4 +80,17 @@ public class Vector2D {
         }
         return nearestIdx;
     }
+
+    public static int getNearest(Location src, AstronautInfo[] search, int searchSize) {
+        int nearestIdx = -1;
+        int distNearest = Integer.MAX_VALUE;
+        for (int i = 0; i < searchSize; i++) {
+            int dist = src.distanceSquared(search[i].getLocation());
+            if (dist < distNearest) {
+                distNearest = dist;
+                nearestIdx = i;
+            }
+        }
+        return nearestIdx;
+    }
 }

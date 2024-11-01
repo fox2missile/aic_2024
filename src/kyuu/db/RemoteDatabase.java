@@ -15,6 +15,8 @@ public class RemoteDatabase extends Database {
     public boolean subscribeSeekSymmetryComplete = false;
     public boolean subscribeEnemyHq = false;
 
+    public boolean subscribePackageRetrievalCommand = false;
+
     public RemoteDatabase(C c) {
         super(c);
         enemyHq = new Location[3];
@@ -45,6 +47,13 @@ public class RemoteDatabase extends Database {
         uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
     }
 
+    public void sendGetPackagesCommand(int targetId, Location targetLoc) {
+        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_GET_PACKAGES_CMD);
+        uc.performAction(ActionType.BROADCAST, null, targetId);
+        uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
+        uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
+    }
+
     public void sendEnemyHqLocMessage(Location loc) {
         c.logger.log("broadcasting enemy hq: %s", loc);
         uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_ENEMY_HQ);
@@ -65,6 +74,13 @@ public class RemoteDatabase extends Database {
                 } else {
                     // skip payload
                     uc.eraseBroadcastBuffer(dc.MSG_SIZE_SYMMETRIC_SEEKER_CMD);
+                }
+            } else if (msgId == dc.MSG_ID_GET_PACKAGES_CMD) {
+                if (subscribePackageRetrievalCommand && (c.id == uc.pollBroadcast().getMessage())) {
+                    return new RetrievePackageCommand(new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage()));
+                } else {
+                    // skip payload
+                    uc.eraseBroadcastBuffer(dc.MSG_SIZE_GET_PACKAGES_CMD);
                 }
             } else if (msgId == dc.MSG_ID_SYMMETRIC_SEEKER_COMPLETE) {
                 if (subscribeSeekSymmetryComplete) {
@@ -151,6 +167,8 @@ public class RemoteDatabase extends Database {
             return dc.MSG_ID_SYMMETRIC_SEEKER_CMD;
         } else if (broadcasted == dc.MSG_ID_ENEMY_HQ) {
             return dc.MSG_ID_ENEMY_HQ;
+        } else if (broadcasted == dc.MSG_ID_GET_PACKAGES_CMD) {
+            return dc.MSG_ID_GET_PACKAGES_CMD;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_SYMMETRIC_SEEKER_COMPLETE) {
             return dc.MSG_ID_SYMMETRIC_SEEKER_COMPLETE;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_ENEMY_HQ_DESTROYED) {
