@@ -153,9 +153,14 @@ public class AstronautTask extends Task {
         } else if (currentBuildDomeCmd != null) {
             handleBuildDome();
         } else if (rdb.enemyHqSize > 0) {
-            if (!attackEnemyHq()) {
-                handleFreeRoam();
+            if (uc.getAstronautInfo().getCarePackage() == CarePackage.REINFORCED_SUIT) {
+                if (!attackEnemyHq()) {
+                    handleFreeRoam();
+                }
+            } else {
+                handleSuppression();
             }
+
         } else {
             handleFreeRoam();
         }
@@ -269,7 +274,7 @@ public class AstronautTask extends Task {
         int nearestHqIdx = Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize);
         Location target = rdb.enemyHq[nearestHqIdx];
         int dist = Vector2D.chebysevDistance(c.loc, target);
-        if (dist > 5 && Vector2D.chebysevDistance(c.loc, target) > uc.getAstronautInfo().getOxygen()) {
+        if (dist > 5 && Vector2D.chebysevDistance(c.loc, target) > c.remainingSteps()) {
             return false;
         }
 
@@ -315,5 +320,100 @@ public class AstronautTask extends Task {
 
 
         return true;
+    }
+
+    private void handleSuppression() {
+        c.destination = null;
+        int nearestHqIdx = Vector2D.getNearestChebysev(c.loc, rdb.enemyHq, rdb.enemyHqSize);
+        Location target = rdb.enemyHq[nearestHqIdx];
+
+
+        if (uc.canSenseLocation(target)) {
+            if (uc.senseStructure(target) == null) {
+                rdb.sendEnemyHqDestroyedMessage(target);
+                return;
+            }
+            while (c.loc.distanceSquared(target) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1)) {
+                uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1);
+            }
+        }
+
+        // attack anyone nearby
+        AstronautInfo[] enemies = uc.senseAstronauts(c.visionRange, c.team.getOpponent());
+        if (enemies.length > 0) {
+            int attackIdx = -1;
+            int highestValue = 0;
+            for (int i = 0; i < enemies.length; i++) {
+                int value = (int) Math.ceil(enemies[i].getOxygen());
+                CarePackage pax = enemies[i].getCarePackage();
+                if (pax == CarePackage.REINFORCED_SUIT) {
+                    value *= value;
+                } else if (pax != null) {
+                    value += 10;
+                }
+                if (value > highestValue) {
+                    attackIdx = i;
+                    highestValue = value;
+                }
+            }
+            if (attackIdx != -1) {
+                c.destination = enemies[attackIdx].getLocation();
+                if (c.loc.distanceSquared(c.destination) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1)) {
+                    uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1);
+                }
+                if (c.canMove(c.loc.directionTo(c.destination))) {
+                    c.move(c.loc.directionTo(c.destination));
+                    while (c.loc.distanceSquared(target) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1)) {
+                        uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1);
+                    }
+                }
+            }
+
+        }
+
+        if (c.remainingSteps() < 5 && c.destination == null &&  Vector2D.chebysevDistance(c.loc, target) > c.remainingSteps()) {
+            retrievePaxTask.run();
+            if (c.destination == null) {
+                c.destination = target;
+            }
+        } else {
+            c.destination = target;
+        }
+
+        if (c.remainingSteps() <= 1) {
+            int bestScore = c.loc.distanceSquared(target);
+            Direction bestDir = Direction.ZERO;
+            if (!uc.canPerformAction(ActionType.TERRAFORM, bestDir, 1)) {
+                bestScore = -1;
+            }
+
+            // nearer distance -> lower score
+
+            Direction check = c.loc.directionTo(target);
+            int score = c.loc.add(check).distanceSquared(target);
+            if (score > bestScore && uc.canPerformAction(ActionType.TERRAFORM, check, 1)) {
+                bestScore = score;
+                bestDir = check;
+            }
+
+            check = c.loc.directionTo(target).opposite();
+            score = c.loc.add(check).distanceSquared(target);
+            if (score > bestScore && uc.canPerformAction(ActionType.TERRAFORM, check, 1)) {
+//                bestScore = score;
+                bestDir = check;
+            }
+
+            if (uc.canPerformAction(ActionType.TERRAFORM, bestDir, 1)) {
+                uc.performAction(ActionType.TERRAFORM, bestDir, 1);
+            } else {
+                for (Direction dir: c.getFirstDirs(c.loc.directionTo(target).opposite())) {
+                    if (uc.canPerformAction(ActionType.TERRAFORM, dir, 1)) {
+                        uc.performAction(ActionType.TERRAFORM, dir, 1);
+                    }
+                }
+            }
+
+        }
+
     }
 }

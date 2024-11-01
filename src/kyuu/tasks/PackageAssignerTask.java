@@ -20,7 +20,7 @@ public class PackageAssignerTask extends Task {
 
     @Override
     public void run() {
-        while (getPackages()) {}
+        while (!ldb.enlistFullyReserved() && getPackages()) {}
     }
 
     private boolean getPackages() {
@@ -66,7 +66,7 @@ public class PackageAssignerTask extends Task {
             }
             for (Direction dir: c.getFirstDirs(dirTarget)) {
                 if (uc.canEnlistAstronaut(dir, retrieveCost, null)) {
-                    uc.enlistAstronaut(dir, retrieveCost, null);
+                    c.enlistAstronaut(dir, retrieveCost, null);
                     int enlistedId = uc.senseAstronaut(c.loc.add(dir)).getID();
                     rdb.sendGetPackagesCommand(enlistedId, bestPax.getLocation());
                     wantedPackages.add(bestPax.getLocation());

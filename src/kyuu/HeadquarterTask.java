@@ -33,6 +33,7 @@ public class HeadquarterTask extends Task {
     DefenseAssginerTask defenseAssignerTask;
     Task expansionTask;
     Task enlistAttackersTask;
+    Task enlistSuppressionTask;
 
 
     HeadquarterTask(C c) {
@@ -50,6 +51,7 @@ public class HeadquarterTask extends Task {
         packageAssignerTask = new PackageAssignerTask(c);
         defenseAssignerTask = new DefenseAssginerTask(c);
         enlistAttackersTask = new EnlistAttackersTask(c);
+        enlistSuppressionTask = new EnlistSuppressionTask(c);
 
         SYMMETRY_SEEK_COOLDOWN = Math.max(uc.getMapWidth() + 5, uc.getMapHeight() + 5);
     }
@@ -59,7 +61,9 @@ public class HeadquarterTask extends Task {
     public void run() {
         c.s.scan();
         enemyHqBroadcasted = false;
+        c.s.initAvailableEnlistSlot();
         ldb.minReserveOxygen = 0;
+        ldb.minReserveEnlistSlot = 0;
         ldb.resetAssignedThisRound();
 
 
@@ -102,7 +106,7 @@ public class HeadquarterTask extends Task {
             enlistAttackersTask.run();
             expansionTask.run();
             packageAssignerTask.run();
-
+            enlistSuppressionTask.run();
 
 
         }
@@ -111,6 +115,9 @@ public class HeadquarterTask extends Task {
     private boolean enlistSymmetrySeeker() {
         int nearestSym = -1;
         int distNearest = Integer.MAX_VALUE;
+        if (ldb.enlistFullyReserved()) {
+            return false;
+        }
         for (int i = 0; i < symmetryCandidates.length; i++) {
             if (symmetryComplete[i]) {
                 continue;
@@ -150,7 +157,7 @@ public class HeadquarterTask extends Task {
         int givenOxygen = 50 + (10 * symmetrySeekAttempts[symIdx]);
         for (Direction d: c.getFirstDirs(c.loc.directionTo(sym))) {
             if (uc.canEnlistAstronaut(d, givenOxygen, pax)) {
-                uc.enlistAstronaut(d, givenOxygen, pax);
+                c.enlistAstronaut(d, givenOxygen, pax);
                 AstronautInfo a = uc.senseAstronaut(c.loc.add(d));
                 rdb.sendSymmetricSeekerCommand(a.getID(), sym);
                 symmetryAssigned[symIdx] = true;

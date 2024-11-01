@@ -37,7 +37,7 @@ public class EnlistAttackersTask extends Task {
 
 
     private void enlistAttackers() {
-        if (rdb.enemyHqSize == 0) {
+        if (rdb.enemyHqSize == 0 || ldb.enlistFullyReserved()) {
             return;
         }
         int nearestEnemyHqIdx = Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize);
@@ -47,19 +47,13 @@ public class EnlistAttackersTask extends Task {
         int boomCost = singleAtkCost * maxReinforcedSuits;
 
         if (uc.getStructureInfo().getCarePackagesOfType(CarePackage.REINFORCED_SUIT) >= maxReinforcedSuits - 1) {
-            ldb.minReserveOxygen = boomCost;
+            ldb.minReserveOxygen += boomCost;
         }
 
         boolean enoughResources = enoughSuits && uc.getStructureInfo().getOxygen() >= boomCost;
 
-        int countEnlist = 0;
-        for (Direction dir: c.getFirstDirs(c.loc.directionTo(targetHq))) {
-            if (c.uc.canEnlistAstronaut(dir, singleAtkCost, CarePackage.REINFORCED_SUIT)) {
-                countEnlist++;
-            }
-        }
 
-        boolean canBoom = (enoughResources && countEnlist >= (maxReinforcedSuits - 2)) || prevDeployReinforcedSuits;
+        boolean canBoom = (enoughResources && ldb.availableEnlistSlot >= (maxReinforcedSuits - 2)) || prevDeployReinforcedSuits;
 
         if (!c.s.isReachableDirectly(targetHq) && !canBoom) {
             prevDeployReinforcedSuits = false;
@@ -69,7 +63,8 @@ public class EnlistAttackersTask extends Task {
         c.logger.log("enlisting attackers with cost %d", singleAtkCost);
         for (Direction dir: c.getFirstDirs(c.loc.directionTo(targetHq))) {
             if (c.uc.canEnlistAstronaut(dir, singleAtkCost, CarePackage.REINFORCED_SUIT)) {
-                c.uc.enlistAstronaut(dir, singleAtkCost, CarePackage.REINFORCED_SUIT);
+                c.enlistAstronaut(dir, singleAtkCost, CarePackage.REINFORCED_SUIT);
+                ldb.minReserveOxygen -= singleAtkCost;
             }
         }
         prevDeployReinforcedSuits = true;

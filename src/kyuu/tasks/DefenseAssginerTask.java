@@ -13,15 +13,22 @@ public class DefenseAssginerTask extends Task {
     FastIntIntMap attackerDefenderMap;
     FastIntIntMap enemyStrengthMap;
 
+    AlertMessage pendingAlert;
+
     public DefenseAssginerTask(C c) {
         super(c);
         attackerDefenderMap = new FastIntIntMap();
         enemyStrengthMap = new FastIntIntMap();
+        pendingAlert = null;
     }
 
     @Override
     public void run() {
         assignDefenders();
+        if (pendingAlert != null) {
+            assignDefenders(pendingAlert);
+        }
+
         cleanup();
     }
 
@@ -67,8 +74,9 @@ public class DefenseAssginerTask extends Task {
                 if (availableSlots <= 1 && enemyStrength > 1 && hasReinforcedSuit) {
                     int givenOxygen = (1 << (enemyStrength - 1)) + 10;
                     givenOxygen = Math.max(givenOxygen, 10);
+                    ldb.minReserveOxygen += givenOxygen;
                     if (uc.canEnlistAstronaut(dir, givenOxygen, CarePackage.REINFORCED_SUIT)) {
-                        uc.enlistAstronaut(dir, givenOxygen, CarePackage.REINFORCED_SUIT);
+                        c.enlistAstronaut(dir, givenOxygen, CarePackage.REINFORCED_SUIT);
                         int enlistId = uc.senseAstronaut(c.loc.add(dir)).getID();
                         rdb.sendDefenseCommand(enlistId, a.getLocation());
                         if (!attackerDefenderMap.contains(a.getID())) {
@@ -76,11 +84,13 @@ public class DefenseAssginerTask extends Task {
                         }
                         uc.drawLineDebug(c.loc.add(dir), a.getLocation(), 0, 0, 255);
 
+                        enemyStrength = 0;
+
                         break;
                     }
                 }
-                if (uc.canEnlistAstronaut(dir, 11, null)) {
-                    uc.enlistAstronaut(dir, 11, null);
+                if (uc.canEnlistAstronaut(dir, 10, null)) {
+                    c.enlistAstronaut(dir, 10, null);
                     int enlistId = uc.senseAstronaut(c.loc.add(dir)).getID();
                     rdb.sendDefenseCommand(enlistId, a.getLocation());
                     if (!attackerDefenderMap.contains(a.getID())) {
@@ -96,6 +106,11 @@ public class DefenseAssginerTask extends Task {
             }
             if (enemyStrength > 0) {
                 enemyStrengthMap.add(a.getID(), enemyStrength);
+                ldb.minReserveEnlistSlot += enemyStrength;
+                ldb.minReserveOxygen += (enemyStrength * 10);
+                if (uc.getStructureInfo().getCarePackagesOfType(CarePackage.REINFORCED_SUIT) > 0) {
+                    ldb.minReserveOxygen += 10;
+                }
             }
         }
     }
@@ -118,7 +133,7 @@ public class DefenseAssginerTask extends Task {
         int oxygenNeeded = Math.max(10, ((Vector2D.chebysevDistance(c.loc, alert.target) * 4) / 5));
         for (Direction dir: c.getFirstDirs(c.loc.directionTo(alert.target))) {
             if (uc.canEnlistAstronaut(dir, oxygenNeeded, null)) {
-                uc.enlistAstronaut(dir, oxygenNeeded, null);
+                c.enlistAstronaut(dir, oxygenNeeded, null);
                 int enlistId = uc.senseAstronaut(c.loc.add(dir)).getID();
                 rdb.sendDefenseCommand(enlistId, alert.target);
                 ldb.pushAssignedThisRound(enlistId);
@@ -128,10 +143,14 @@ public class DefenseAssginerTask extends Task {
             if (alert.enemyStrength <= 0) {
                 break;
             }
-
-
         }
-
+        if (alert.enemyStrength > 0) {
+            pendingAlert = alert;
+            ldb.minReserveEnlistSlot += alert.enemyStrength;
+            ldb.minReserveOxygen += (oxygenNeeded * alert.enemyStrength);
+        } else {
+            pendingAlert = null;
+        }
     }
 
     private void cleanup() {
