@@ -9,6 +9,10 @@ plugins {
     application
 }
 
+repositories {
+    mavenCentral()
+}
+
 sourceSets {
     main { 
         java {
@@ -22,6 +26,7 @@ sourceSets {
 dependencies {
     implementation(files("jars/aic2024.jar"))
     implementation(files("jars/asm-all-5.0.3.jar"))
+    implementation("com.github.javaparser:javaparser-core:3.26.2")
 }
 
 application {
