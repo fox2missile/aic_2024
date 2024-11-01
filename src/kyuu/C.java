@@ -10,7 +10,7 @@ import kyuu.log.LoggerStandard;
 
 // C stands for Context
 public class C {
-    public final boolean DEBUG = false; // todo: better boom
+    public final boolean DEBUG = true; // todo: better boom
     public UnitController uc;
     public Team team;
     public Team opponent;
@@ -302,5 +302,9 @@ public class C {
 
     public Location mirrorRotational(Location loc) {
         return new Location(mapWidth - loc.x - 1, mapHeight - loc.y - 1);
+    }
+
+    public boolean isDiagonalDir(Direction dir) {
+        return dir == Direction.NORTHEAST || dir == Direction.NORTHWEST || dir == Direction.SOUTHEAST || dir == Direction.SOUTHWEST;
     }
 }

@@ -22,6 +22,7 @@ public class RemoteDatabase extends Database {
 //    public boolean subscribeSeekSymmetryCommand = false;
 //    public boolean subscribeSeekSymmetryComplete = false;
     public MessageReceiver seekSymmetryCompleteReceiver;
+    public MessageReceiver seekSymmetryCompleteReceiver2;
     public MessageReceiver seekSymmetryCommandReceiver;
     public MessageReceiver suppressionCommandReceiver;
     public MessageReceiver buildDomeCommandReceiver;
@@ -36,6 +37,8 @@ public class RemoteDatabase extends Database {
     public MessageReceiver retrievePackageFailedReceiver;
     public MessageReceiver retrievePackageCommandReceiver;
     public MessageReceiver suppressorHeartbeatReceiver;
+    public MessageReceiver worldMapperCommandReceiver;
+    public MessageReceiver worldObstacleReceiver;
     public boolean subscribeEnemyHq = false;
     public boolean subscribeDefenseCommand = false;
     public boolean subscribeSurveyCommand = false;
@@ -304,6 +307,13 @@ public class RemoteDatabase extends Database {
         uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
     }
 
+    public void sendWorldMapperCommand(int mapperId, Location targetLoc) {
+        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_WORLD_MAPPER_CMD);
+        uc.performAction(ActionType.BROADCAST, null, mapperId);
+        uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
+        uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
+    }
+
     public void sendSurveyCommand(int surveyor, Location targetLoc, int expansionId, Location[] path) {
         c.logger.log("send out surveyor %d to %s [expansion id: %d]", surveyor, targetLoc, expansionId);
         uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_SURVEY_CMD);
@@ -375,6 +385,15 @@ public class RemoteDatabase extends Database {
         uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_PACKAGE_PRIORITY_MAP);
         for (int score : priorityMap) {
             uc.performAction(ActionType.BROADCAST, null, score);
+        }
+    }
+
+    public void sendWorldObstacles(Location[] obstacles, int begin, int length) {
+        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_WORLD_OBSTACLES);
+        uc.performAction(ActionType.BROADCAST, null, length);
+        for (int i = begin; i < begin + length; i++) {
+            uc.performAction(ActionType.BROADCAST, null, obstacles[i].x);
+            uc.performAction(ActionType.BROADCAST, null, obstacles[i].y);
         }
     }
 
@@ -484,10 +503,22 @@ public class RemoteDatabase extends Database {
             } else if (msgId == dc.MSG_ID_SYMMETRIC_SEEKER_COMPLETE) {
                 if (seekSymmetryCompleteReceiver != null) {
                     seekSymmetryCompleteReceiver.receive(fullMsg);
-                }
+                    // secondary receivers should not read further broadcasts
+                    if (seekSymmetryCompleteReceiver2 != null) {
+                        seekSymmetryCompleteReceiver2.receive(-1);
+                    }
+                } // size = 1
             } else if (msgId == dc.MSG_ID_SUPPRESSION_CMD) {
                 if (suppressionCommandReceiver != null) {
                     suppressionCommandReceiver.receive(fullMsg);
+                } else {
+                    uc.eraseBroadcastBuffer(dc.MSG_SIZE_SUPPRESSION_CMD); // ID wasn't read
+                }
+            } else if (msgId == dc.MSG_ID_WORLD_MAPPER_CMD) {
+                if (worldMapperCommandReceiver != null) {
+                    worldMapperCommandReceiver.receive(fullMsg);
+                } else {
+                    uc.eraseBroadcastBuffer(dc.MSG_SIZE_WORLD_MAPPER_CMD); // ID wasn't read
                 }
             } else if (msgId == dc.MSG_ID_SETTLEMENT_CMD) {
                 if (settlementCommandReceiver != null) {
@@ -590,6 +621,12 @@ public class RemoteDatabase extends Database {
                     newSettlementReceiver.receive(fullMsg);
                 } else {
                     uc.eraseBroadcastBuffer(dc.MSG_SIZE_NEW_SETTLEMENT);
+                }
+            } else if (msgId == dc.MSG_ID_WORLD_OBSTACLES) {
+                if (worldObstacleReceiver != null) {
+                    worldObstacleReceiver.receive(fullMsg);
+                } else {
+                    uc.eraseBroadcastBuffer(uc.pollBroadcast().getMessage() * 2); // first message is the length
                 }
             } else if (msgId == dc.MSG_ID_ALERT) {
                 if (subscribeAlert) {
@@ -854,6 +891,10 @@ public class RemoteDatabase extends Database {
             return dc.MSG_ID_NEW_SETTLEMENT;
         } else if (broadcasted == dc.MSG_ID_SUPPRESSOR_HEARTBEAT) {
             return dc.MSG_ID_SUPPRESSOR_HEARTBEAT;
+        } else if (broadcasted == dc.MSG_ID_WORLD_MAPPER_CMD) {
+            return dc.MSG_ID_WORLD_MAPPER_CMD;
+        } else if (broadcasted == dc.MSG_ID_WORLD_OBSTACLES) {
+            return dc.MSG_ID_WORLD_OBSTACLES;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_SURVEY_COMPLETE_GOOD) {
             return dc.MSG_ID_SURVEY_COMPLETE_GOOD;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_SURVEY_COMPLETE_BAD) {

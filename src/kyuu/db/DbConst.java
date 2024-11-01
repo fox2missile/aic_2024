@@ -6,6 +6,13 @@ import aic2024.user.Location;
 
 public class DbConst {
 
+    public final int TILE_UNKNOWN = -1;
+    public final int TILE_LAND = 0;
+    public final int TILE_OBSTACLE = 1;
+    public final int TILE_TERRAFORMED = 2;
+    public final int TILE_DOMED = 3;
+    public final int TILE_HYPER_JUMP = 4;
+
     public final int MAX_MAP_OFFSET = 1000;
 
     public final int MAX_BASES = 15;
@@ -75,6 +82,9 @@ public class DbConst {
 
     public final int MSG_SIZE_INQUIRE_DOME = 2;
     // {
+
+    public final int MSG_SIZE_WORLD_MAPPER_CMD = 3;
+    // {mapper id, x, y}
 
     public final int MSG_SIZE_SUPPRESSION_CMD = 3;
     // {suppressor id, x, y}
@@ -161,5 +171,6 @@ public class DbConst {
     public final int MSG_ID_NEW_SETTLEMENT = MSG_ID_BEGIN - 26;
     public final int MSG_ID_GET_PACKAGES_FAILED = MSG_ID_BEGIN - 27;
     public final int MSG_ID_SUPPRESSOR_HEARTBEAT = MSG_ID_BEGIN - 28;
-
+    public final int MSG_ID_WORLD_MAPPER_CMD = MSG_ID_BEGIN - 29;
+    public final int MSG_ID_WORLD_OBSTACLES = MSG_ID_BEGIN - 30;
 }

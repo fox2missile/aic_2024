@@ -26,6 +26,7 @@ public class AstronautTask extends Task {
     Task settlementPaxTask;
     Task currentSettlerTask;
     Task currentSymmetryTask;
+    Task currentWorldMapperTask;
     Direction spawnDir;
 
     private final int initialOxygen;
@@ -139,6 +140,19 @@ public class AstronautTask extends Task {
                 uc.eraseBroadcastBuffer(dc.MSG_SIZE_GET_PACKAGES_CMD - 1); // -1 ID
             }
         };
+
+        if (uc.getAstronautInfo().getCarePackage() == CarePackage.RADIO) {
+            rdb.worldMapperCommandReceiver = (int __) -> {
+                if (c.id == uc.pollBroadcast().getMessage()) {
+                    currentWorldMapperTask = new WorldMapperTask(c,
+                            new WorldMapperCommand(new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage())));
+                    currentDefTask = null;
+                } else {
+                    uc.eraseBroadcastBuffer(dc.MSG_SIZE_WORLD_MAPPER_CMD - 1); // -1 ID
+                }
+            };
+        }
+
     }
 
     @Override
@@ -150,7 +164,7 @@ public class AstronautTask extends Task {
 
         AstronautInfo[] enemies = uc.senseAstronauts(c.visionRange, c.opponent);
 
-        if (currentSettlerTask == null && currentBuildHyperJumpCmd == null && currentBuildDomeTask == null && currentSurveyTask == null && currentDefTask == null && uc.senseStructures(c.visionRange, c.team).length > 0 && enemies.length > 0) {
+        if (currentWorldMapperTask == null && currentSettlerTask == null && currentBuildHyperJumpCmd == null && currentBuildDomeTask == null && currentSurveyTask == null && currentDefTask == null && uc.senseStructures(c.visionRange, c.team).length > 0 && enemies.length > 0) {
             int nearestIdx = Vector2D.getNearest(c.loc, enemies, enemies.length);
             currentDefTask = new DefenseTask(c, new DefenseCommand(enemies[nearestIdx].getLocation()));
         }
@@ -231,6 +245,8 @@ public class AstronautTask extends Task {
             currentSymmetryTask.run();
         } else if (currentSettlerTask != null) {
             currentSettlerTask.run();
+        } else if (currentWorldMapperTask != null) {
+            currentWorldMapperTask.run();
         } else if (currentRetPaxCmd != null) {
             if (!handleRetrievePax()) {
                 if (currentExpansionWorkerTask != null) {

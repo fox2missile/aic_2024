@@ -75,35 +75,46 @@ public class Scanner {
         return slot;
     }
 
-    public void trySendAlert() {
+    public Location trySendAlert() {
         if (!uc.isStructure()) {
             if (uc.senseStructures(c.visionRange, c.team).length > 0) {
-                return;
+                return null;
             }
         }
         AstronautInfo[] enemies = uc.senseAstronauts(c.visionRange, c.opponent);
         if (enemies.length == 0) {
-            return;
+            return null;
         }
         int totalStrength = 0;
         int sumX = 0;
         int sumY = 0;
+        int tentativeTotalStrength = 0;
+        int tentativeSumX = 0;
+        int tentativeSumY = 0;
         for (AstronautInfo enemy: enemies) {
             int strength = 1;
             if (enemy.getCarePackage() == CarePackage.REINFORCED_SUIT) {
                 strength = c.bitCount((int)(Math.ceil(enemy.getOxygen())));
             } else if (enemy.getOxygen() < 30) {
+                tentativeTotalStrength++;
+                tentativeSumX += enemy.getLocation().x;
+                tentativeSumY += enemy.getLocation().y;
                 continue;
             }
             totalStrength += strength;
             sumX += enemy.getLocation().x * strength;
             sumY += enemy.getLocation().y * strength;
+            tentativeTotalStrength = totalStrength;
+            tentativeSumX = sumX;
+            tentativeSumY = sumY;
         }
+        Location alertLoc = new Location(tentativeSumX / tentativeTotalStrength, tentativeSumY / tentativeTotalStrength);
         if (totalStrength <= 3) {
-            return;
+            return alertLoc;
         }
-        AlertMessage msg = new AlertMessage(new Location(sumX / totalStrength, sumY / totalStrength), totalStrength);
+        AlertMessage msg = new AlertMessage(alertLoc, totalStrength);
         c.rdb.trySendAlert(msg);
+        return alertLoc;
     }
 
 

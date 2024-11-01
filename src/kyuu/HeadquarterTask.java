@@ -28,6 +28,7 @@ public class HeadquarterTask extends Task {
     Task jumpStrategyTask;
 
     Task settlementStrategyTask;
+    Task pathPlannerTask;
 
     float prevOxygen;
 
@@ -45,6 +46,7 @@ public class HeadquarterTask extends Task {
         symmetrySeekerAssignerTask = new SymmetrySeekerAssignerTask(c);
         settlementStrategyTask = new SettlementStrategyTask(c);
         jumpStrategyTask = new JumpStrategyTask(c);
+        pathPlannerTask = new PathPlannerTask(c);
         prevOxygen = -1;
         rdb.newSettlementReceiver = (int __) -> {
             BroadcastInfo idxBroadcast = uc.pollBroadcast();
@@ -141,6 +143,7 @@ public class HeadquarterTask extends Task {
             jumpStrategyTask.run();
 
             enlistSuppressorsTask.run();
+            pathPlannerTask.run();
 
 //            for (Iterator<Location> it = rdb.recentDangerSectors.getBackIterator(); it.hasNext(); ) {
 //                Location sector = it.next();
