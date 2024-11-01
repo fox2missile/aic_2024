@@ -99,6 +99,7 @@ public class ExpansionTask extends Task {
     int expansionsDepth1Size;
     Expansion[] expansionsDepth2; // cannot expand again
     int expansionsDepth2Size;
+
     int expansionSize;
 
     int lastDepth1Expansion;
@@ -138,6 +139,8 @@ public class ExpansionTask extends Task {
         sendExpansionWorkers();
 
         deepenExpansion();
+
+        buildDome();
     }
 
     private Expansion findChildExpansion(Location expansionTarget) {
@@ -257,17 +260,17 @@ public class ExpansionTask extends Task {
             return;
         }
 
-        if (ex.depth == 0 && rdb.surveyorStates[ex.id][i] == dc.SURVEY_GOOD && ex.expansionCounter[i] >= 3 && rdb.expansionStates[ex.id][i] != dc.EXPANSION_STATE_ESTABLISHED) {
+        if (ex.depth == 0 && rdb.surveyorStates[ex.id][i] == dc.SURVEY_GOOD && ex.expansionCounter[i] >= 3 && rdb.expansionStates[ex.id][i] < dc.EXPANSION_STATE_ESTABLISHED) {
             c.logger.log("Expansion established: %s", rdb.expansionSites[ex.id][i]);
             rdb.expansionStates[ex.id][i] = dc.EXPANSION_STATE_ESTABLISHED;
         }
 
-        if (ex.depth == 0 && rdb.surveyorStates[ex.id][i] == dc.SURVEY_EXCELLENT && ex.expansionCounter[i] >= 7 && rdb.expansionStates[ex.id][i] != dc.EXPANSION_STATE_ESTABLISHED) {
+        if (ex.depth == 0 && rdb.surveyorStates[ex.id][i] == dc.SURVEY_EXCELLENT && ex.expansionCounter[i] >= 7 && rdb.expansionStates[ex.id][i] < dc.EXPANSION_STATE_ESTABLISHED) {
             c.logger.log("Expansion established: %s", rdb.expansionSites[ex.id][i]);
             rdb.expansionStates[ex.id][i] = dc.EXPANSION_STATE_ESTABLISHED;
         }
 
-        if (ex.depth != 0 && rdb.expansionStates[ex.id][i] != dc.EXPANSION_STATE_ESTABLISHED) {
+        if (ex.depth != 0 && rdb.expansionStates[ex.id][i] < dc.EXPANSION_STATE_ESTABLISHED) {
             c.logger.log("Expansion established: %s", rdb.expansionSites[ex.id][i]);
             rdb.expansionStates[ex.id][i] = dc.EXPANSION_STATE_ESTABLISHED;
         }
@@ -280,6 +283,17 @@ public class ExpansionTask extends Task {
             carePackage = CarePackage.SURVIVAL_KIT;
         }
 
+        if (rdb.expansionStates[ex.id][i] == dc.EXPANSION_STATE_HAS_DOME) {
+            givenOxygen -= 5;
+        }
+
+        if (ex.depth >= 1) {
+            if (rdb.expansionStates[ex.parent.id][ex.expansionDirectionIdx] == dc.EXPANSION_STATE_HAS_DOME) {
+                givenOxygen -= 5;
+            }
+        }
+
+        givenOxygen = Math.max(givenOxygen, 10);
 
 
         for (Direction dir: c.getFirstDirs(c.allDirs[i])) {
@@ -300,7 +314,7 @@ public class ExpansionTask extends Task {
                 rdb.sendExpansionCommand(enlistedId, rdb.expansionSites[ex.id][i], rdb.expansionStates[ex.id][i], ex.id, ex.expansionTree, possibleNextExpansion);
                 ex.expansionWorkers[i] = enlistedId;
                 ex.expansionCounter[i]++;
-                if (rdb.expansionStates[ex.id][i] == dc.EXPANSION_STATE_ESTABLISHED) {
+                if (rdb.expansionStates[ex.id][i] >= dc.EXPANSION_STATE_ESTABLISHED) {
                     ex.expansionStart[i] = uc.getRound();
                 } else {
                     ex.expansionStart[i] = 0; // this allows expansion to resume immediately once the previous worker disappears
@@ -311,7 +325,7 @@ public class ExpansionTask extends Task {
 
 
         // send package worker and defense worker after their primary work, prioritize established expansion
-        if (ldb.assignedThisRoundSize > 0 && rdb.expansionStates[ex.id][i] == dc.EXPANSION_STATE_ESTABLISHED) {
+        if (ldb.assignedThisRoundSize > 0 && rdb.expansionStates[ex.id][i] >= dc.EXPANSION_STATE_ESTABLISHED) {
             int assign = ldb.popAssignedThisRound();
             rdb.sendExpansionCommand(assign, rdb.expansionSites[ex.id][i], rdb.expansionStates[ex.id][i], ex.id, ex.expansionTree, null);
         }
@@ -328,7 +342,7 @@ public class ExpansionTask extends Task {
     private void deepenExpansion() {
         // root -> depth 1
         for (int i = 0; i < c.allDirs.length; i++) {
-            if (rdb.expansionStates[rootExpansion.id][i] == dc.EXPANSION_STATE_ESTABLISHED && !rootExpansion.deepened[i]) {
+            if (rdb.expansionStates[rootExpansion.id][i] >= dc.EXPANSION_STATE_ESTABLISHED && !rootExpansion.deepened[i]) {
                 expansionsDepth1[expansionsDepth1Size++] = new Expansion(rdb.expansionSites[rootExpansion.id][i], 1 + i, i, 1, rootExpansion);
                 rootExpansion.deepened[i] = true;
             }
@@ -338,11 +352,74 @@ public class ExpansionTask extends Task {
         for (int k = 0; k < expansionsDepth1Size; k++) {
             Expansion current = expansionsDepth1[k];
             int dirIdx = current.expansionDirectionIdx;
-            if (rdb.expansionStates[current.id][dirIdx] == dc.EXPANSION_STATE_ESTABLISHED && !current.deepened[dirIdx]) {
+            if (rdb.expansionStates[current.id][dirIdx] >=  dc.EXPANSION_STATE_ESTABLISHED && !current.deepened[dirIdx]) {
                 expansionsDepth2[expansionsDepth2Size++] = new Expansion(rdb.expansionSites[current.id][dirIdx], 9 + dirIdx, dirIdx, 1, current);
                 current.deepened[dirIdx] = true;
             }
             // todo: three way expansion
+        }
+    }
+
+    private void buildDome() {
+
+        for (int i = 0; i < c.allDirs.length; i++) {
+            if (rdb.expansionStates[rootExpansion.id][i] == dc.EXPANSION_STATE_BUILDING_DOME) {
+                rdb.sendDomeInquiry(rdb.expansionSites[rootExpansion.id][i]);
+            }
+        }
+
+        if (uc.getStructureInfo().getCarePackagesOfType(CarePackage.DOME) == 0 || uc.senseAstronauts(c.visionRange, c.opponent).length >= 1) {
+            return;
+        }
+
+        if (rdb.alertCount < 5) {
+            // we do not have enough info on where the enemies might be coming from
+            return;
+        }
+
+        // prioritize excellent location
+        int buildDir = -1;
+        for (int i = 0; i < c.allDirs.length; i++) {
+            Location target = rdb.expansionSites[rootExpansion.id][i];
+            if (target.x - 5 < 0 || target.x + 5 >= uc.getMapWidth() || target.y - 5 < 0 || target.y + 5 >= uc.getMapHeight()) {
+                continue;
+            }
+            if (rdb.expansionStates[rootExpansion.id][i] < dc.EXPANSION_STATE_BUILDING_DOME
+                    && rdb.surveyorStates[rootExpansion.id][i] == dc.SURVEY_EXCELLENT
+                    && !rdb.isKnownDangerousLocation(target)) {
+                buildDir = i;
+                break;
+            }
+        }
+        if (buildDir == -1) {
+            for (int i = 0; i < c.allDirs.length; i++) {
+                Location target = rdb.expansionSites[rootExpansion.id][i];
+                if (target.x - 5 < 0 || target.x + 5 >= uc.getMapWidth() || target.y - 5 < 0 || target.y + 5 >= uc.getMapHeight()) {
+                    continue;
+                }
+                if (rdb.expansionStates[rootExpansion.id][i] < dc.EXPANSION_STATE_BUILDING_DOME
+                        && rdb.surveyorStates[rootExpansion.id][i] == dc.SURVEY_GOOD
+                        && !rdb.isKnownDangerousLocation(target)) {
+                    buildDir = i;
+                    break;
+                }
+            }
+        }
+        if (buildDir != -1) {
+            buildDome(buildDir);
+        }
+    }
+
+    private void buildDome(int dirIdx) {
+        Location buildLoc = rdb.expansionSites[rootExpansion.id][dirIdx];
+        for (Direction dir: c.getFirstDirs(c.allDirs[dirIdx])) {
+            if (uc.canEnlistAstronaut(dir, COST_SURVEY, CarePackage.DOME)) {
+                uc.enlistAstronaut(dir, COST_SURVEY, CarePackage.DOME);
+                int enlistId = uc.senseAstronaut(c.loc.add(dir)).getID();
+                rdb.sendBuildDomeCommand(enlistId, buildLoc);
+                rdb.expansionStates[rootExpansion.id][dirIdx] = dc.EXPANSION_STATE_BUILDING_DOME;
+                break;
+            }
         }
     }
 

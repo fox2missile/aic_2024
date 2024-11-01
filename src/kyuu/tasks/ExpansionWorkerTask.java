@@ -3,6 +3,7 @@ package kyuu.tasks;
 import aic2024.user.*;
 import kyuu.C;
 import kyuu.Vector2D;
+import kyuu.message.DomeDestroyedNotification;
 import kyuu.message.ExpansionCommand;
 import kyuu.message.ExpansionEstablishedMessage;
 
@@ -56,14 +57,19 @@ public class ExpansionWorkerTask extends Task {
     private void handleEstablished() {
         c.destination = null;
 
-        if (uc.getAstronautInfo().getOxygen() < 5 || reachedTarget) {
+        if (cmd.state == dc.EXPANSION_STATE_HAS_DOME && uc.canSenseLocation(cmd.target) && !uc.isDomed(cmd.target) && c.remainingSteps() < 5) {
+            rdb.sendDomeDestroyedMsg(new DomeDestroyedNotification(cmd.target));
+            return;
+        }
+
+        if (c.remainingSteps() < 5 || reachedTarget) {
             paxRetrievalTask.run();
         }
-        if (c.destination != null && uc.getAstronautInfo().getOxygen() < 10) {
+        if (c.destination != null && c.remainingSteps() < 10) {
             nearbyPaxRetrievalTask.run();
         }
 
-        if (uc.getAstronautInfo().getOxygen() <= 1) {
+        if (c.remainingSteps() <= 1) {
             int bestScore = c.loc.distanceSquared(currentTarget);
             Direction bestDir = Direction.ZERO;
             if (!uc.canPerformAction(ActionType.TERRAFORM, bestDir, 1)) {
@@ -126,7 +132,7 @@ public class ExpansionWorkerTask extends Task {
     private boolean valuableTargetFound() {
         for (CarePackageInfo pax: uc.senseCarePackages(c.visionRange)) {
             if (pax.getCarePackageType() == CarePackage.OXYGEN_TANK || pax.getCarePackageType() == CarePackage.SETTLEMENT || pax.getCarePackageType() == CarePackage.REINFORCED_SUIT ||
-                    (pax.getCarePackageType() == CarePackage.PLANTS && uc.getAstronautInfo().getOxygen() <= 7)) {
+                    (pax.getCarePackageType() == CarePackage.PLANTS && c.remainingSteps() <= 7)) {
                 return true;
             }
         }

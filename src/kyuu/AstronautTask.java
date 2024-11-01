@@ -16,6 +16,9 @@ public class AstronautTask extends Task {
     SeekSymmetryCommand currentSymmetryCmd;
     RetrievePackageCommand currentRetPaxCmd;
     DefenseCommand currentDefCmd;
+    BuildDomeCommand currentBuildDomeCmd;
+
+    DomeBuiltNotification latestDomeBuiltNotification;
     Task currentSurveyTask;
     Task currentExpansionWorkerTask;
 
@@ -35,6 +38,8 @@ public class AstronautTask extends Task {
         rdb.subscribeSurveyCommand = true;
         rdb.subscribeExpansionCommand = true;
         rdb.subscribeDefenseCommand = true;
+        rdb.subscribeBuildDomeCommand = true;
+        rdb.subscribeDomeBuilt = true;
         initialOxygen = (int)Math.floor(uc.getAstronautInfo().getOxygen());
         c.logger.log("Spawn");
         attackStarted = false;
@@ -43,6 +48,7 @@ public class AstronautTask extends Task {
     @Override
     public void run() {
         c.s.scan();
+        int round = uc.getRound();
 
         rdb.resetEnemyHq();
 
@@ -53,12 +59,19 @@ public class AstronautTask extends Task {
             currentDefCmd = new DefenseCommand(enemies[nearestIdx].getLocation());
         }
 
+        InquireDomeMessage currentInquireDomeMsg = null;
+
         Message msg = rdb.retrieveNextMessage();
         while (msg != null) {
             if (msg instanceof SeekSymmetryCommand && rdb.enemyHqSize == 0) {
                 currentSymmetryCmd = (SeekSymmetryCommand)msg;
             } else if (msg instanceof EnemyHqMessage) {
-                currentSymmetryCmd = null;
+                if (currentSymmetryCmd != null) {
+                    EnemyHqMessage enemyHq = (EnemyHqMessage) msg;
+                    if (enemyHq.target.equals(currentSymmetryCmd.target)) {
+                        currentSymmetryCmd = null;
+                    }
+                }
             } else if (msg instanceof RetrievePackageCommand) {
                 currentRetPaxCmd = (RetrievePackageCommand) msg;
             } else if (msg instanceof DefenseCommand) {
@@ -67,6 +80,12 @@ public class AstronautTask extends Task {
                 currentSurveyTask = new SurveyTask(c, (SurveyCommand) msg);
             } else if (msg instanceof ExpansionCommand) {
                 currentExpansionWorkerTask = new ExpansionWorkerTask(c, ((ExpansionCommand) msg), retrievePaxTask);
+            } else if (msg instanceof BuildDomeCommand) {
+                currentBuildDomeCmd = (BuildDomeCommand) msg;
+            } else if (msg instanceof InquireDomeMessage) {
+                currentInquireDomeMsg = (InquireDomeMessage) msg;
+            } else if (msg instanceof DomeBuiltNotification) {
+                latestDomeBuiltNotification = (DomeBuiltNotification) msg;
             }
             msg = rdb.retrieveNextMessage();
         }
@@ -77,6 +96,46 @@ public class AstronautTask extends Task {
 
         seekUnknownEnemyHq();
 
+        doActions();
+
+        Location prevLoc = c.loc;
+
+
+        moveTask.run();
+        c.destination = null;
+
+        if (!c.loc.equals(prevLoc)) {
+            // second runs
+            doActions();
+        }
+
+        moveTask.run();
+        c.destination = null;
+
+        if (c.destination != null) {
+            c.uc.drawLineDebug(c.uc.getLocation(), c.destination, 0, 255, 0);
+        }
+
+        if (uc.getRound() != round) {
+            return;
+        }
+
+        // report dome
+        if (currentInquireDomeMsg != null && latestDomeBuiltNotification == null) {
+            boolean canReport = uc.getAstronautInfo().getCarePackage() == null;
+            canReport = canReport && currentDefCmd == null;
+            canReport = canReport && currentRetPaxCmd == null;
+            canReport = canReport && currentSurveyTask == null;
+            canReport = canReport && currentSymmetryCmd == null;
+            canReport = canReport && uc.getAstronautInfo().getOxygen() < 10;
+            if (canReport) {
+                    rdb.sendDomeBuiltMsg(new DomeBuiltNotification(currentInquireDomeMsg.target));
+                    currentInquireDomeMsg = null;
+            }
+        }
+    }
+
+    private void doActions() {
         if (currentDefCmd != null) {
             handleDefense();
         } else if (currentSymmetryCmd != null) {
@@ -89,24 +148,18 @@ public class AstronautTask extends Task {
                     handleFreeRoam();
                 }
             }
-        }  else if (currentSurveyTask != null) {
+        } else if (currentSurveyTask != null) {
             currentSurveyTask.run();
-        }   else if (currentExpansionWorkerTask != null) {
+        } else if (currentExpansionWorkerTask != null) {
             currentExpansionWorkerTask.run();
+        } else if (currentBuildDomeCmd != null) {
+            handleBuildDome();
         } else if (rdb.enemyHqSize > 0) {
             if (!attackEnemyHq()) {
                 handleFreeRoam();
             }
         } else {
             handleFreeRoam();
-        }
-
-//        pathFinder.initTurn();
-        if (c.destination != null) {
-//            pathFinder.move(c.destination);
-            moveTask.run();
-            c.uc.drawLineDebug(c.uc.getLocation(), c.destination, 0, 255, 0);
-            c.destination = null;
         }
     }
 
@@ -116,6 +169,33 @@ public class AstronautTask extends Task {
                 if (rdb.addEnemyHq(s.getLocation())) {
                     rdb.sendSeekSymmetryCompleteMsg(new SeekSymmetryComplete(s.getLocation(), dc.SYMMETRIC_SEEKER_COMPLETE_FOUND_HQ));
                 }
+            }
+        }
+    }
+
+    private void handleBuildDome() {
+        if (Vector2D.chebysevDistance(c.loc, currentBuildDomeCmd.target) > 2 && c.remainingSteps() > 1) {
+            c.destination = currentBuildDomeCmd.target;
+            return;
+        }
+
+        if (c.loc.equals(currentBuildDomeCmd.target)) {
+            if (uc.canPerformAction(ActionType.BUILD_DOME, Direction.ZERO, 1)) {
+                uc.performAction(ActionType.BUILD_DOME, Direction.ZERO, 1);
+                return;
+            }
+            for (Direction dir: c.allDirs) {
+                if (uc.canPerformAction(ActionType.BUILD_DOME, dir, 1)) {
+                    uc.performAction(ActionType.BUILD_DOME, dir, 1);
+                    return;
+                }
+            }
+        }
+
+        for (Direction dir: c.getFirstDirs(c.loc.directionTo(currentBuildDomeCmd.target))) {
+            if (uc.canPerformAction(ActionType.BUILD_DOME, dir, 1)) {
+                uc.performAction(ActionType.BUILD_DOME, dir, 1);
+                return;
             }
         }
     }

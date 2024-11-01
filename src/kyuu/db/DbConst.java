@@ -49,9 +49,18 @@ public class DbConst {
     // {worker id, x, y, state, expansion id, next.x, next.y, src size (loc), src1.x, src1.y, src2.x, src2.y, src3.x, src3.y}
     public final int EXPANSION_STATE_INIT = 0;
     public final int EXPANSION_STATE_ESTABLISHED = 1;
+    public final int EXPANSION_STATE_BUILDING_DOME = 2;
+    public final int EXPANSION_STATE_HAS_DOME = 3;
 
     public final int MSG_SIZE_ENEMY_HQ = 2;
     // {x, y}
+
+    // MSG_ID_BUILD_DOME_CMD
+    public final int MSG_SIZE_BUILD_DOME_CMD = 3;
+    // {builder id, x, y}
+
+    public final int MSG_SIZE_INQUIRE_DOME = 3;
+
 
     // MSG_ID_SYMMETRIC_SEEKER_COMPLETE
     // {type, LOC X, LOC Y} in 32bit int
@@ -80,6 +89,8 @@ public class DbConst {
     public final int MSG_ID_MASK_SURVEY_COMPLETE_EXCELLENT = 0x06000000;
     public final int MSG_ID_MASK_EXPANSION_ESTABLISHED = 0x07000000;
     public final int MSG_ID_MASK_ALERT = 0x08000000;
+    public final int MSG_ID_MASK_DOME_BUILT = 0x09000000;
+    public final int MSG_ID_MASK_DOME_DESTROYED = 0x0A000000;
 
     // common maskers
     public final int MASKER_LOC_X = 0x00FF0000;
@@ -105,5 +116,9 @@ public class DbConst {
     public final int MSG_ID_EXPANSION = MSG_ID_BEGIN - 13;
     public final int MSG_ID_EXPANSION_ESTABLISHED = MSG_ID_BEGIN - 14;
     public final int MSG_ID_ALERT = MSG_ID_BEGIN - 15;
+    public final int MSG_ID_BUILD_DOME_CMD = MSG_ID_BEGIN - 16;
+    public final int MSG_ID_INQUIRE_DOME = MSG_ID_BEGIN - 17;
+    public final int MSG_ID_DOME_BUILT = MSG_ID_BEGIN - 18;
+    public final int MSG_ID_DOME_DESTROYED = MSG_ID_BEGIN - 19;
 
 }
