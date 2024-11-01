@@ -30,6 +30,7 @@ class TestWorker:
             '-Dpackage1=' + match.player_1,
             '-Dpackage2=' + match.player_2,
             '-Dreplay=' + replay_file,
+            '-Dseed=' + str(match.seed),
             'run_replay'], stdout=subprocess.PIPE)
         output = result.stdout.decode('utf-8').split('\n')
         # for o in output:
