@@ -7,27 +7,26 @@ import kyuu.message.PackagePriorityNotice;
 
 public class RetrievePackageTask extends Task {
 
-    CarePackageInfo target;
-    int[] packagesBaseScore;
+    private CarePackageInfo target;
 
-    final int[] defaultScores = {
+    private final int[] defaultScores = {
         100, //SETTLEMENT
-        2, //DOME
-        10, //HYPERJUMP
-        -1, //RADIO
+        -10, //DOME
+        -10, //HYPERJUMP
+        -10, //RADIO
         200, //REINFORCED_SUIT
         50, //SURVIVAL_KIT
         200, //OXYGEN_TANK
         400, //PLANTS
     };
 
-    int[] scoreMap;
+    private final int[] scoreMap;
 
-    int prevRound;
+    private int prevRound;
 
-    float visionRange;
+    private final float visionRange;
 
-    boolean isDefault;
+    private final boolean isDefault;
 
     PackagePriorityNotice currentBoost;
 
@@ -59,10 +58,10 @@ public class RetrievePackageTask extends Task {
 
     public static RetrievePackageTask createNearbyPackageTask(C c) {
         return new RetrievePackageTask(c, new int[]{
-                0, //SETTLEMENT
-                0, //DOME
-                0, //HYPERJUMP
-                0, //RADIO
+                100, //SETTLEMENT
+                -10, //DOME
+                -10, //HYPERJUMP
+                -10, //RADIO
                 200, //REINFORCED_SUIT
                 0, //SURVIVAL_KIT
                 200, //OXYGEN_TANK

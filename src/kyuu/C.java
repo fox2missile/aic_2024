@@ -149,7 +149,12 @@ public class C {
             multiplier *= 2;
         }
 
-        return (int)Math.ceil(uc.getAstronautInfo().getOxygen() * 0.75 * multiplier);
+        double defaultMultiplier = 0.75;
+        if (uc.getAstronautInfo().getOxygen() <= 3) {
+            defaultMultiplier = 1;
+        }
+
+        return (int)Math.ceil(uc.getAstronautInfo().getOxygen() * defaultMultiplier * multiplier);
     }
 
     C(UnitController unitController) {

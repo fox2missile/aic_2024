@@ -3,12 +3,15 @@ package kyuu.tasks;
 import aic2024.user.*;
 import kyuu.C;
 import kyuu.Vector2D;
+import kyuu.fast.FastLocIntMap;
 import kyuu.fast.FastLocSet;
+import kyuu.message.RetrievePackageFailed;
 
 public class PackageAssignerTask extends Task {
 
 
     FastLocSet wantedPackages;
+    FastLocIntMap failedLocationCounter;
 
     final int[] defaultScores = {
             100, //SETTLEMENT
@@ -32,41 +35,55 @@ public class PackageAssignerTask extends Task {
             400, //PLANTS
     };
 
+    int[] priorityBoostMap;
+
     int[] scoreMap;
 
     public PackageAssignerTask(C c) {
         super(c);
         wantedPackages = new FastLocSet();
+        failedLocationCounter = new FastLocIntMap();
         scoreMap = uc.getStructureInfo().getType() == StructureType.HQ ? defaultScores : settlementDefaultScores;
+        priorityBoostMap = new int[CarePackage.values().length];
+        rdb.retrievePackageFailedReceiver = (int fullMsg) -> {
+            RetrievePackageFailed msg = rdb.parseGetPackageFailedMessage(fullMsg);
+            if (failedLocationCounter.contains(msg.target)) {
+                int currentCount = failedLocationCounter.getVal(msg.target);
+                failedLocationCounter.addReplace(msg.target, currentCount + 1);
+                wantedPackages.remove(msg.target);
+            }
+        };
     }
 
     @Override
     public void run() {
+        adjustPriority();
         while (!ldb.enlistFullyReserved() && getPackages()) {}
 
-        adjustPriority();
     }
 
     private void adjustPriority() {
+        priorityBoostMap = new int[CarePackage.values().length];
         if (ldb.oxygenProductionRate >= 5) {
             scoreMap = defaultScores;
-            int[] prio = new int[CarePackage.values().length];
-            if (uc.getStructureInfo().getCarePackagesOfType(CarePackage.RADIO) > 5) {
-                prio[CarePackage.RADIO.ordinal()] -= 1000;
+            if (uc.getStructureInfo().getCarePackagesOfType(CarePackage.RADIO) >= 5) {
+                priorityBoostMap[CarePackage.RADIO.ordinal()] = -1000;
             }
             if (uc.getStructureInfo().getCarePackagesOfType(CarePackage.REINFORCED_SUIT) > 30) {
-                prio[CarePackage.REINFORCED_SUIT.ordinal()] -= 100;
-                prio[CarePackage.OXYGEN_TANK.ordinal()] += 100;
+                priorityBoostMap[CarePackage.REINFORCED_SUIT.ordinal()] = -100;
+                priorityBoostMap[CarePackage.OXYGEN_TANK.ordinal()] = 100;
             }
-            prio[CarePackage.HYPERJUMP.ordinal()] += (10 * (ldb.neededHyperJumps - uc.getStructureInfo().getCarePackagesOfType(CarePackage.HYPERJUMP)));
-            rdb.sendPackagePriorityNotice(prio);
+            if (uc.getStructureInfo().getCarePackagesOfType(CarePackage.DOME) >= 1) {
+                priorityBoostMap[CarePackage.DOME.ordinal()] = -1000;
+            }
+            priorityBoostMap[CarePackage.HYPERJUMP.ordinal()] = (10 * (ldb.neededHyperJumps - uc.getStructureInfo().getCarePackagesOfType(CarePackage.HYPERJUMP)));
         }
+        rdb.sendPackagePriorityNotice(priorityBoostMap);
 
     }
 
     private boolean getPackages() {
-        uc.senseCarePackages(c.visionRange);
-        int bestScore = Integer.MIN_VALUE;
+        int bestScore = 0;
         CarePackageInfo bestPax = null;
         FastLocSet currentPaxes = new FastLocSet();
         for (CarePackageInfo pax: uc.senseCarePackages(c.visionRange)) {
@@ -74,7 +91,7 @@ public class PackageAssignerTask extends Task {
             if (wantedPackages.contains(pax.getLocation())) {
                 continue;
             }
-            if (!c.s.isReachableDirectly(pax.getLocation())) {
+            if (failedLocationCounter.getVal(pax.getLocation()) >= 3) {
                 continue;
             }
             int dist = Vector2D.manhattanDistance(c.loc, pax.getLocation());
@@ -110,7 +127,15 @@ public class PackageAssignerTask extends Task {
                     c.enlistAstronaut(dir, retrieveCost, null);
                     int enlistedId = uc.senseAstronaut(c.loc.add(dir)).getID();
                     rdb.sendGetPackagesCommand(enlistedId, bestPax.getLocation());
-                    wantedPackages.add(bestPax.getLocation());
+                    Location paxLocation = bestPax.getLocation();
+                    wantedPackages.add(paxLocation);
+                    if (!failedLocationCounter.contains(paxLocation)) {
+                        int startingCount = 0;
+                        if (!c.s.isReachableDirectly(paxLocation)) {
+                            startingCount = 2;
+                        }
+                        failedLocationCounter.add(paxLocation, startingCount);
+                    }
                     uc.drawLineDebug(c.loc, bestPax.getLocation(), 0, 255, 0);
                     ldb.pushAssignedThisRound(enlistedId);
                     return true;
@@ -128,6 +153,7 @@ public class PackageAssignerTask extends Task {
         } else {
             score += scoreMap[carePackageType.ordinal()];
         }
+        score += priorityBoostMap[carePackageType.ordinal()];
         return score;
     }
 }

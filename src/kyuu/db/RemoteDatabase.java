@@ -31,11 +31,12 @@ public class RemoteDatabase extends Database {
     public MessageReceiver settlementCommandReceiver;
     public MessageReceiver baseHeartbeatReceiver;
     public MessageReceiver newSettlementReceiver;
+    public MessageReceiver retrievePackageFailedReceiver;
+    public MessageReceiver retrievePackageCommandReceiver;
     public boolean subscribeEnemyHq = false;
     public boolean subscribeDefenseCommand = false;
     public boolean subscribeSurveyCommand = false;
     public boolean subscribeExpansionCommand = false;
-    public boolean subscribePackageRetrievalCommand = false;
     public boolean subscribeSurveyComplete = false;
     public boolean subscribeExpansionEstablished = false;
     public boolean subscribeBuildHyperJumpCmd = false;
@@ -363,14 +364,14 @@ public class RemoteDatabase extends Database {
                     uc.eraseBroadcastBuffer(dc.MSG_SIZE_SYMMETRIC_SEEKER_CMD); // ID wasn't read
                 }
             } else if (msgId == dc.MSG_ID_GET_PACKAGES_CMD) {
-                if (subscribePackageRetrievalCommand) {
-                    if (c.id == uc.pollBroadcast().getMessage()) {
-                        return new RetrievePackageCommand(new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage()));
-                    } else {
-                        uc.eraseBroadcastBuffer(dc.MSG_SIZE_GET_PACKAGES_CMD - 1); // -1 ID
-                    }
+                if (retrievePackageCommandReceiver != null) {
+                    retrievePackageCommandReceiver.receive(fullMsg);
                 } else {
                     uc.eraseBroadcastBuffer(dc.MSG_SIZE_GET_PACKAGES_CMD); // ID wasn't read
+                }
+            } else if (msgId == dc.MSG_ID_GET_PACKAGES_FAILED) {
+                if (retrievePackageFailedReceiver != null) {
+                    retrievePackageFailedReceiver.receive(fullMsg);
                 }
             } else if (msgId == dc.MSG_ID_DEFENSE_CMD) {
                 if (subscribeDefenseCommand) {
@@ -641,6 +642,18 @@ public class RemoteDatabase extends Database {
         deleteEnemyHq(loc);
     }
 
+    public RetrievePackageFailed parseGetPackageFailedMessage(int fullMsg) {
+        return new RetrievePackageFailed(new Location((fullMsg & dc.MASKER_LOC_X) >> dc.MASKER_LOC_X_SHIFT,
+                (fullMsg & dc.MASKER_LOC_Y) >> dc.MASKER_LOC_Y_SHIFT));
+    }
+
+    public void sendGetPackageFailedMessage(Location paxLocation) {
+        int encoded = dc.MSG_ID_GET_PACKAGES_FAILED;
+        encoded |= (paxLocation.x << dc.MASKER_LOC_X_SHIFT);
+        encoded |= (paxLocation.y << dc.MASKER_LOC_Y_SHIFT);
+        uc.performAction(ActionType.BROADCAST, null, encoded);
+    }
+
     public void sendSeekSymmetryCompleteMsg(SeekSymmetryComplete msg) {
         int encoded = dc.MSG_ID_MASK_SYMMETRIC_SEEKER_COMPLETE;
         encoded |= (msg.target.x << dc.MASKER_LOC_X_SHIFT);
@@ -788,6 +801,8 @@ public class RemoteDatabase extends Database {
             return dc.MSG_ID_DOME_DESTROYED;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_EXPANSION_MISSED) {
             return dc.MSG_ID_EXPANSION_MISSED;
+        } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_GET_PACKAGES_FAILED) {
+            return dc.MSG_ID_GET_PACKAGES_FAILED;
         }
         return 0;
     }
