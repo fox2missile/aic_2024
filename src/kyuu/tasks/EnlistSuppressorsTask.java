@@ -163,6 +163,13 @@ public class EnlistSuppressorsTask extends Task {
         Location enemyHq = rdb.enemyHq[nearestEnemyHqIdx];
 
         int stepDist = Vector2D.chebysevDistance(c.loc, enemyHq);
+        int remainingRounds = 1000 - uc.getRound();
+        if (remainingRounds <= stepDist * 2) {
+            minSuppressors = 0;
+            return;
+        } else if (remainingRounds <= stepDist * 4) {
+            minSuppressors /= 2;
+        }
         int dist = c.loc.distanceSquared(enemyHq);
         if (dist > 2 * 30 * 30) {
             return;
