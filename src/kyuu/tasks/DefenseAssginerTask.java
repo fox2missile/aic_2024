@@ -11,10 +11,12 @@ import kyuu.message.AlertMessage;
 public class DefenseAssginerTask extends Task {
 
     FastIntIntMap attackerDefenderMap;
+    FastIntIntMap enemyStrengthMap;
 
     public DefenseAssginerTask(C c) {
         super(c);
         attackerDefenderMap = new FastIntIntMap();
+        enemyStrengthMap = new FastIntIntMap();
     }
 
     @Override
@@ -24,6 +26,12 @@ public class DefenseAssginerTask extends Task {
     }
 
     private void assignDefenders() {
+        int availableSlots = 0;
+        for (Direction dir: c.allDirs) {
+            if (uc.canEnlistAstronaut(dir, 11, null)) {
+                availableSlots++;
+            }
+        }
         for (AstronautInfo a: uc.senseAstronauts(c.visionRange, c.opponent)) {
             if (attackerDefenderMap.contains(a.getID())) {
                 if (c.s.isAllyVisible(attackerDefenderMap.getVal(a.getID()))) {
@@ -43,14 +51,22 @@ public class DefenseAssginerTask extends Task {
                 return;
             }
             int enemyStrength = 1;
-            int enemyOxygen = (int)Math.ceil(a.getOxygen());
-            if (a.getCarePackage() == CarePackage.REINFORCED_SUIT) {
-                enemyStrength = c.bitCount(enemyOxygen);
+            if (enemyStrengthMap.contains(a.getID())) {
+                enemyStrength = enemyStrengthMap.getVal(a.getID());
+            } else {
+                int enemyOxygen = (int)Math.ceil(a.getOxygen());
+                if (a.getCarePackage() == CarePackage.REINFORCED_SUIT) {
+                    enemyStrength = c.bitCount(enemyOxygen);
+                }
             }
+
+
+            boolean hasReinforcedSuit = uc.getStructureInfo().getCarePackagesOfType(CarePackage.REINFORCED_SUIT) > 0;
+
             for (Direction dir: c.getFirstDirs(c.loc.directionTo(a.getLocation()))) {
-                if (enemyStrength > 1 && uc.getStructureInfo().getCarePackagesOfType(CarePackage.REINFORCED_SUIT) > 0) {
-                    // todo: optimize 2^N
-                    int givenOxygen = Math.min(enemyOxygen + 10, (int)Math.floor(uc.getStructureInfo().getOxygen()));
+                if (availableSlots <= 1 && enemyStrength > 1 && hasReinforcedSuit) {
+                    int givenOxygen = (1 << (enemyStrength - 1)) + 10;
+                    givenOxygen = Math.max(givenOxygen, 10);
                     if (uc.canEnlistAstronaut(dir, givenOxygen, CarePackage.REINFORCED_SUIT)) {
                         uc.enlistAstronaut(dir, givenOxygen, CarePackage.REINFORCED_SUIT);
                         int enlistId = uc.senseAstronaut(c.loc.add(dir)).getID();
@@ -59,29 +75,27 @@ public class DefenseAssginerTask extends Task {
                             attackerDefenderMap.add(a.getID(),enlistId);
                         }
                         uc.drawLineDebug(c.loc.add(dir), a.getLocation(), 0, 0, 255);
-                        if (givenOxygen < enemyOxygen + 10) {
-                            // no more oxygen!
-                            return;
-                        }
-                        enemyStrength /= 4;
+
+                        break;
                     }
-                } else {
-                    if (uc.canEnlistAstronaut(dir, 11, null)) {
-                        uc.enlistAstronaut(dir, 11, null);
-                        int enlistId = uc.senseAstronaut(c.loc.add(dir)).getID();
-                        rdb.sendDefenseCommand(enlistId, a.getLocation());
-                        if (!attackerDefenderMap.contains(a.getID())) {
-                            attackerDefenderMap.add(a.getID(), enlistId);
-                        }
-                        ldb.pushAssignedThisRound(enlistId);
-                        uc.drawLineDebug(c.loc.add(dir), a.getLocation(), 0, 0, 255);
-                        enemyStrength--;
+                }
+                if (uc.canEnlistAstronaut(dir, 11, null)) {
+                    uc.enlistAstronaut(dir, 11, null);
+                    int enlistId = uc.senseAstronaut(c.loc.add(dir)).getID();
+                    rdb.sendDefenseCommand(enlistId, a.getLocation());
+                    if (!attackerDefenderMap.contains(a.getID())) {
+                        attackerDefenderMap.add(a.getID(), enlistId);
                     }
+                    ldb.pushAssignedThisRound(enlistId);
+                    uc.drawLineDebug(c.loc.add(dir), a.getLocation(), 0, 0, 255);
+                    enemyStrength--;
                 }
                 if (enemyStrength <= 0) {
                     break;
                 }
-
+            }
+            if (enemyStrength > 0) {
+                enemyStrengthMap.add(a.getID(), enemyStrength);
             }
         }
     }

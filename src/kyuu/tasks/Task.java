@@ -22,9 +22,7 @@ public abstract class Task {
     }
     public abstract void run();
 
-    public void secondRun() {
-        // execute after move
-        // override for special cases
-        run();
+    public boolean isFinished() {
+        return false;
     }
 }
