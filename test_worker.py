@@ -24,6 +24,7 @@ class TestWorker:
         replay_file = str(match)
         replay_file = replay_file.replace(' ', '-').replace(':', '_')
         self.log("replay file: " + replay_file)
+        replay_folder = 'games\\' + str(match.id).replace(' ', '-').replace(':', '_')
         result = subprocess.run([
             'cmd', '/c', 'ant',
             '-Dmap=' + match.map,
@@ -56,6 +57,10 @@ class TestWorker:
             result_list = MatchResultList(repr_str=raw_result_list.decode()) if raw_result_list is not None \
                 else MatchResultList()
             result_list.append(result)
+            subprocess.run([
+                'cmd', '/c', 'if not exist ' + replay_folder + ' mkdir ' + replay_folder], stdout=subprocess.PIPE)
+            subprocess.run([
+                'cmd', '/c', 'move', 'games\\' + replay_file + '.txt', replay_folder], stdout=subprocess.PIPE)
             self.redis.set(result_list_key, str(result_list))
         finally:
             if result_lock.owned():
