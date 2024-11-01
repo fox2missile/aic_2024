@@ -9,8 +9,6 @@ out/
 env/
 src/*_v*/
 
-build.defaults
-build.xml
 .idea
 
 # Ignore Gradle project-specific cache directory
