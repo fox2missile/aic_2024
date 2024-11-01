@@ -53,24 +53,24 @@ public class ExpansionTask extends Task {
 
     // eliminate expansion site nearest to enemy HQ
     private void eliminateExpansionSites() {
-        for (int i = 0; i < rdb.enemyHqSize; i++) {
-            int closestDirIdx = -1;
-            int nearestDist = Integer.MAX_VALUE;
-            for (int j = 0; j < c.allDirs.length; j++) {
-                int dist = Vector2D.manhattanDistance(expansionSites[j], rdb.enemyHq[i]);
-                if (dist < 20) {
-                    expansionSurveyState[j] = dc.SURVEY_BAD;
-                    break;
-                }
-                if (dist < nearestDist) {
-                    nearestDist = dist;
-                    closestDirIdx = j;
-                }
-            }
-            if (closestDirIdx != -1) {
-                expansionSurveyState[closestDirIdx] = dc.SURVEY_BAD;
-            }
-        }
+//        for (int i = 0; i < rdb.enemyHqSize; i++) {
+//            int closestDirIdx = -1;
+//            int nearestDist = Integer.MAX_VALUE;
+//            for (int j = 0; j < c.allDirs.length; j++) {
+//                int dist = Vector2D.manhattanDistance(expansionSites[j], rdb.enemyHq[i]);
+//                if (dist < 20) {
+//                    expansionSurveyState[j] = dc.SURVEY_BAD;
+//                    break;
+//                }
+//                if (dist < nearestDist) {
+//                    nearestDist = dist;
+//                    closestDirIdx = j;
+//                }
+//            }
+//            if (closestDirIdx != -1) {
+//                expansionSurveyState[closestDirIdx] = dc.SURVEY_BAD;
+//            }
+//        }
     }
 
     private void sendOutSurveyors() {
