@@ -39,7 +39,7 @@ public class ExpansionTask extends Task {
 
 
         Expansion(Location loc, int localExpansionId, int generalDirIdx, int depth, Expansion parent) {
-            id = localExpansionId + (rdb.hqIdx * dc.EXPANSION_SIZE);
+            id = localExpansionId + rdb.getThisHqExpansionId();
             this.parent = parent;
 
             expansionLoc = loc;

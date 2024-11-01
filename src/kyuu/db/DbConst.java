@@ -23,6 +23,9 @@ public class DbConst {
 
     // MSG_ID_SYMMETRIC_SEEKER_CMD
     public final int MSG_SIZE_SYMMETRIC_SEEKER_CMD = 3;
+    public final int SYMMETRY_HORIZONTAL = 0;
+    public final int SYMMETRY_VERTICAL = 1;
+    public final int SYMMETRY_ROTATIONAL = 2;
     // {TARGET UNIT, LOC X, LOC Y}
 
     // MSG_ID_GET_PACKAGES_CMD
@@ -64,7 +67,11 @@ public class DbConst {
     public final int MSG_SIZE_BUILD_HYPER_JUMP_CMD = 3;
     // {builder id, x, y}
 
-    public final int MSG_SIZE_INQUIRE_DOME = 3;
+    public final int MSG_SIZE_INQUIRE_DOME = 2;
+    // {
+
+    public final int MSG_SIZE_SUPPRESSION_CMD = 3;
+    // {suppressor id, x, y}
 
 
     // MSG_ID_SYMMETRIC_SEEKER_COMPLETE
@@ -129,5 +136,6 @@ public class DbConst {
     public final int MSG_ID_DOME_DESTROYED = MSG_ID_BEGIN - 19;
     public final int MSG_ID_EXPANSION_MISSED = MSG_ID_BEGIN - 20;
     public final int MSG_ID_BUILD_HYPER_JUMP_CMD = MSG_ID_BEGIN - 21;
+    public final int MSG_ID_SUPPRESSION_CMD = MSG_ID_BEGIN - 22;
 
 }
