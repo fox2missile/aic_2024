@@ -90,7 +90,7 @@ public class MoveTask extends Task {
                 }
                 uc.performAction(ActionType.JUMP, bestJump.dir, bestJump.steps);
                 c.logger.log("jump %s -> %s", c.loc, bestJump.landing);
-                c.loc = bestJump.landing;
+                c.loc = uc.getLocation();
                 parallelSearchAllowed = true;
                 parallelSearchValid = false;
 
@@ -128,17 +128,18 @@ public class MoveTask extends Task {
     }
 
     private Jump findBestJump(Location src, int baselineDist) {
-        Direction generalDir = src.directionTo(c.destination);
-        Direction[] dirs = new Direction[]{generalDir, generalDir.rotateRight(), generalDir.rotateLeft()};
         int bestDist = baselineDist;
         Direction bestDir = Direction.ZERO;
         Location bestLanding = src;
         int bestStep = 0;
-        for (Direction dir: dirs) {
+        for (Direction dir: c.fourDirs) {
             for (int j = GameConstants.MAX_JUMP; j > 0; j--) {
                 Location landing = src.add(dir.dx * j, dir.dy * j);
                 int dist = landing.distanceSquared(c.destination);
-                if (dist < baselineDist && uc.canPerformAction(ActionType.JUMP, dir, j)) {
+                if (dist < baselineDist && uc.canSenseLocation(landing) && !uc.isOutOfMap(landing)
+                        && !c.isObstacle(uc.senseObjectAtLocation(landing))
+                        && uc.senseAstronaut(landing) == null
+                        && uc.senseStructure(landing) == null) {
                     if (dist < bestDist) {
                         bestDist = dist;
                         bestDir = dir;
