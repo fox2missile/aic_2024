@@ -29,6 +29,7 @@ public class RemoteDatabase extends Database {
     public boolean subscribeAlert = true;
 
     public int[][] surveyorStates;
+    public int[][] lastBadSurvey;
     public Location[][] expansionSites;
     public int[][] expansionStates;
 
@@ -57,6 +58,16 @@ public class RemoteDatabase extends Database {
         surveyorStates = new int[dc.EXPANSION_SIZE * dc.MAX_HQ][c.allDirs.length];
         expansionSites = new Location[dc.EXPANSION_SIZE * dc.MAX_HQ][c.allDirs.length];
         expansionStates = new int[dc.EXPANSION_SIZE * dc.MAX_HQ][c.allDirs.length];
+        lastBadSurvey = new int[dc.EXPANSION_SIZE * dc.MAX_HQ][c.allDirs.length];
+    }
+
+    public void clearBadSurveyHistory(int expansionId, int steps) {
+        for (int i = 0; i < c.allDirs.length; i++) {
+            if (surveyorStates[expansionId][i] == dc.SURVEY_BAD && lastBadSurvey[expansionId][i] != -1 && uc.getRound() - lastBadSurvey[expansionId][i] >= steps) {
+                lastBadSurvey[expansionId][i] = 0;
+                surveyorStates[expansionId][i] = dc.SURVEY_NONE;
+            }
+        }
     }
 
     public void sendHqInfo() {
@@ -140,10 +151,15 @@ public class RemoteDatabase extends Database {
         uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
         uc.performAction(ActionType.BROADCAST, null, expansionId);
         uc.performAction(ActionType.BROADCAST, null, sources.length);
-        for (Location source : sources) {
+        for (int i = 0; i < sources.length; i++) {
+            Location source = sources[i];
+            if (i >= 1) {
+                uc.drawLineDebug(sources[i], sources[i-1], 0, 255, 255);
+            }
             uc.performAction(ActionType.BROADCAST, null, source.x);
             uc.performAction(ActionType.BROADCAST, null, source.y);
         }
+            uc.drawLineDebug(targetLoc, sources[sources.length - 1], 0, 255, 255);
         // padding
         if (sources.length < dc.MAX_EXPANSION_DEPTH) {
             for (int i = sources.length; i < dc.MAX_EXPANSION_DEPTH; i++) {
@@ -320,6 +336,9 @@ public class RemoteDatabase extends Database {
                             if (Vector2D.chebysevDistance(expansionSites[expansionId][i], s.target) < 3) {
                                 c.logger.log("Received survey status: %s - %s", s.target, s.status);
                                 surveyorStates[expansionId][i] = s.status;
+                                if (s.status == dc.SURVEY_BAD) {
+                                    lastBadSurvey[expansionId][i] = uc.getRound();
+                                }
                                 return s;
                             }
                         }
