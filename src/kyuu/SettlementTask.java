@@ -15,6 +15,7 @@ public class SettlementTask extends Task {
     Task settlementStrategyTask;
     Task enlistAttackersTask;
     Task jumpStrategyTask;
+    Task enlistSuppressorsTask;
 
     float prevOxygen;
 
@@ -25,6 +26,7 @@ public class SettlementTask extends Task {
         enlistAttackersTask = new EnlistAttackersTask(c);
         settlementStrategyTask = new SettlementStrategyTask(c);
         jumpStrategyTask = new JumpStrategyTask(c);
+        enlistSuppressorsTask = new EnlistSuppressorsTask(c);
         prevOxygen = -1;
 
 
@@ -52,6 +54,7 @@ public class SettlementTask extends Task {
 
     private void doActions() {
         defenseTask.run();
+        c.s.trySendAlert();
         if (uc.getRound() == c.spawnRound) {
             // settlement must wait to receive all messages by the HQs
             return;
@@ -106,6 +109,9 @@ public class SettlementTask extends Task {
         expansionTask.run();
         packageAssignerTask.run();
         jumpStrategyTask.run();
+        if (ldb.oxygenProductionRate > 3) {
+            enlistSuppressorsTask.run();
+        }
         rdb.sendBaseHeartbeat();
 
     }
