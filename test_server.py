@@ -136,7 +136,7 @@ class TestServer:
                 if pending_matches == 0:
                     self.log("finished")
                     print("{:20} | {:10} | {:25} | {:25}".format("map", "win rate %", "win reason", "lose reason"))
-                    for map_name in sorted(map_win.keys()):
+                    for map_name in sorted(map_play.keys()):
                         print("{:20} | {:10} | {:25} | {:25}".format(
                             map_name, "{:.2f}%".format((map_win[map_name] / map_play[map_name]) * 100),
                             ','.join(map_win_reason[map_name]), ','.join(map_lose_reason[map_name])))

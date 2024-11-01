@@ -36,7 +36,7 @@ class Match:
         return Match(map_name=self.map, player_1=self.player_2, player_2=self.player_1, match_id=self.id, seed=self.seed)
 
     def __repr__(self):
-        return '{} on {} - {} vs {}'.format(self.id, self.map, self.player_1, self.player_2)
+        return '{} on {}#{} - {} vs {}'.format(self.id, self.map, self.seed, self.player_1, self.player_2)
 
     def __str__(self):
         return self.__repr__()
