@@ -69,6 +69,7 @@ public class HeadquarterTask extends Task {
 
         if (uc.getRound() == 0) {
             rdb.sendHqInfo();
+            handleEarlyPlantsGatherer();
         } else if (uc.getRound() == 1) {
             rdb.initHqLocs();
             rdb.sendHqInfo();
@@ -115,6 +116,22 @@ public class HeadquarterTask extends Task {
             enlistSuppressionTask.run();
 
 
+        }
+    }
+
+    private void handleEarlyPlantsGatherer() {
+        if (uc.senseStructures(c.visionRange, c.opponent).length > 0) {
+            return;
+        }
+        Direction symmetryDir = c.loc.directionTo(new Location(c.mapWidth - c.loc.x - 1, c.mapHeight - c.loc.y - 1));
+        int enlistCount = 0;
+        Direction[] firstDirs = c.getFirstDirs(symmetryDir);
+        for (int i = 0; i < firstDirs.length && enlistCount < 3; i++) {
+            Direction dir = firstDirs[i];
+            if (uc.canEnlistAstronaut(dir, 30, null)) {
+                uc.enlistAstronaut(dir, 30, null);
+                enlistCount++;
+            }
         }
     }
 

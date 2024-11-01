@@ -20,6 +20,8 @@ public class AstronautTask extends Task {
     DomeBuiltNotification latestDomeBuiltNotification;
     Task currentSurveyTask;
     Task currentExpansionWorkerTask;
+    Task plantsGatheringTask;
+    Direction spawnDir;
 
     private final int initialOxygen;
 
@@ -28,6 +30,7 @@ public class AstronautTask extends Task {
     public AstronautTask(C c) {
         super(c);
         moveTask = new MoveTask(c);
+        plantsGatheringTask = RetrievePackageTask.createPlantsGatheringTask(c);
         scanSectorTask = new ScanSectorTask(c);
         retrievePaxTask = new RetrievePackageTask(c);
         rdb.subscribeSeekSymmetryCommand = true;
@@ -42,6 +45,11 @@ public class AstronautTask extends Task {
         initialOxygen = (int)Math.floor(uc.getAstronautInfo().getOxygen());
         c.logger.log("Spawn");
         attackStarted = false;
+        for (StructureInfo s: uc.senseStructures(c.actionRange, c.team)) {
+            if (s.getType() == StructureType.HQ) {
+                spawnDir = s.getLocation().directionTo(c.loc);
+            }
+        }
     }
 
     @Override
@@ -76,9 +84,9 @@ public class AstronautTask extends Task {
             } else if (msg instanceof DefenseCommand) {
                 currentDefTask = new DefenseTask(c, (DefenseCommand) msg);
             } else if (msg instanceof SurveyCommand) {
-                currentSurveyTask = new SurveyTask(c, (SurveyCommand) msg);
+                currentSurveyTask = new SurveyTask(c, (SurveyCommand) msg, plantsGatheringTask);
             } else if (msg instanceof ExpansionCommand) {
-                currentExpansionWorkerTask = new ExpansionWorkerTask(c, ((ExpansionCommand) msg), retrievePaxTask);
+                currentExpansionWorkerTask = new ExpansionWorkerTask(c, ((ExpansionCommand) msg), retrievePaxTask, plantsGatheringTask);
             } else if (msg instanceof BuildDomeCommand) {
                 currentBuildDomeCmd = (BuildDomeCommand) msg;
             } else if (msg instanceof BuildHyperJumpCommand) {
@@ -220,10 +228,22 @@ public class AstronautTask extends Task {
 
 
     private void handleFreeRoam() {
-        retrievePaxTask.run();
-        if (c.destination == null) {
-            scanSectorTask.run();
+
+        Direction moveDir = spawnDir;
+        if (uc.getRound() > 15 && rdb.enemyHqSize > 0) {
+            int nearestEnemyHqIdx = Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize);
+            moveDir = c.loc.directionTo(rdb.enemyHq[nearestEnemyHqIdx]);
         }
+
+        c.destination = c.loc.add(moveDir);
+
+        plantsGatheringTask.run();
+        if (c.destination != null && uc.getRound() > 300) {
+            retrievePaxTask.run();
+        }
+//        if (c.destination == null) {
+//            scanSectorTask.run();
+//        }
     }
 
     private void handleSymmetrySeekCmd() {
@@ -339,9 +359,15 @@ public class AstronautTask extends Task {
 
     private void handleSuppression() {
         c.destination = null;
-        int nearestHqIdx = Vector2D.getNearestChebysev(c.loc, rdb.enemyHq, rdb.enemyHqSize);
+        int nearestHqIdx = Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize);
         Location target = rdb.enemyHq[nearestHqIdx];
 
+        if (uc.getRound() < 350) {
+            plantsGatheringTask.run();
+        }
+        if (c.destination != null) {
+            return;
+        }
 
         if (uc.canSenseLocation(target)) {
             if (uc.senseStructure(target) == null) {

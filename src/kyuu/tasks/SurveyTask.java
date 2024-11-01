@@ -17,8 +17,12 @@ public class SurveyTask extends Task {
 
     boolean tryAlter;
     Direction surveyDirection;
-    public SurveyTask(C c, SurveyCommand cmd) {
+
+    Task plantsGatheringTask;
+
+    public SurveyTask(C c, SurveyCommand cmd, Task plantsGatheringTask) {
         super(c);
+        this.plantsGatheringTask = plantsGatheringTask;
         search = ParallelSearch.getDefaultSearch(c);
         tryAlter = false;
         for (StructureInfo s: uc.senseStructures(c.actionRange, c.team)) {
@@ -42,6 +46,12 @@ public class SurveyTask extends Task {
     @Override
     public void run() {
         c.s.trySendAlert();
+        if (uc.senseStructures(c.visionRange, c.team).length == 0 && uc.getRound() < 500) {
+            plantsGatheringTask.run();
+            if (c.destination != null) {
+                return;
+            }
+        }
         int dist = Vector2D.manhattanDistance(c.loc, currentTarget);
         c.destination = currentTarget;
         if (c.remainingSteps() < 2) {
