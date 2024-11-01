@@ -1,8 +1,11 @@
 package kyuu.db;
 
+import aic2024.user.GameConstants;
+import aic2024.user.Location;
+
 public class DbConst {
 
-    public int MAX_MAP_OFFSET = 1000;
+    public final int MAX_MAP_OFFSET = 1000;
 
     // sector properties: constants
     public final int SECTOR_SQUARE_SIZE = 5;
@@ -30,13 +33,20 @@ public class DbConst {
     public final int MSG_SIZE_DEFENSE_CMD = 3;
     // {DEFENDER ID, THREAT X, THREAT Y}
 
+    // expansion
+    public final int MAX_EXPANSION_DEPTH = 3;
+    public final int MAX_HQ = 3;
+    public final Location INVALID_LOCATION = new Location(GameConstants.MAX_MAP_SIZE, GameConstants.MAX_MAP_SIZE);
+
+    public final int EXPANSION_SIZE = 25;
+
     // MSG_ID_SURVEY_CMD
-    public final int MSG_SIZE_SURVEY_CMD = 4;
-    // {SURVEYOR ID, x, y, expansion id}
+    public final int MSG_SIZE_SURVEY_CMD = 11;
+    // {SURVEYOR ID, x, y, expansion id, src size (loc), src1.x, src1.y, src2.x, src2.y, src3.x, src3.y}
 
     // MSG_ID_EXPANSION
-    public final int MSG_SIZE_EXPANSION = 5;
-    // {worker id, x, y, state, expansion id}
+    public final int MSG_SIZE_EXPANSION = 14;
+    // {worker id, x, y, state, expansion id, next.x, next.y, src size (loc), src1.x, src1.y, src2.x, src2.y, src3.x, src3.y}
     public final int EXPANSION_STATE_INIT = 0;
     public final int EXPANSION_STATE_ESTABLISHED = 1;
 

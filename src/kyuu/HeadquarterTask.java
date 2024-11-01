@@ -5,10 +5,7 @@ import aic2024.user.*;
 import kyuu.fast.FastLocSet;
 import kyuu.message.*;
 import kyuu.pathfinder.ParallelSearch;
-import kyuu.tasks.DefenseAssginerTask;
-import kyuu.tasks.ExpansionTask;
-import kyuu.tasks.PackageAssignerTask;
-import kyuu.tasks.Task;
+import kyuu.tasks.*;
 
 public class HeadquarterTask extends Task {
 
@@ -35,10 +32,8 @@ public class HeadquarterTask extends Task {
     Task packageAssignerTask;
     DefenseAssginerTask defenseAssignerTask;
     Task expansionTask;
-    int maxReinforcedSuits;
-    int originalMaxReinforcedSuits;
+    Task enlistAttackersTask;
 
-    boolean prevDeployReinforcedSuits;
 
     HeadquarterTask(C c) {
         super(c);
@@ -51,20 +46,9 @@ public class HeadquarterTask extends Task {
         packageSearch = ParallelSearch.getDefaultSearch(c);
         packageAssignerTask = new PackageAssignerTask(c);
         defenseAssignerTask = new DefenseAssginerTask(c);
-        expansionTask = new ExpansionTask(c, c.loc, 0);
-        maxReinforcedSuits = 0;
-        for (Direction dir: c.allDirs) {
-            Location check = c.loc.add(dir);
-            if (!uc.isOutOfMap(check) && uc.canSenseLocation(check) && !c.isObstacle(uc.senseObjectAtLocation(check))) {
-                maxReinforcedSuits++;
-            }
-        }
-        originalMaxReinforcedSuits = maxReinforcedSuits;
-        if (maxReinforcedSuits > 4) {
-            maxReinforcedSuits = 4;
-        }
+        enlistAttackersTask = new EnlistAttackersTask(c);
+
         SYMMETRY_SEEK_COOLDOWN = Math.max(uc.getMapWidth() + 5, uc.getMapHeight() + 5);
-        prevDeployReinforcedSuits = false;
     }
 
 
@@ -72,6 +56,7 @@ public class HeadquarterTask extends Task {
     public void run() {
         c.s.scan();
         enemyHqBroadcasted = false;
+        ldb.minReserveOxygen = 0;
         ldb.resetAssignedThisRound();
 
 
@@ -81,6 +66,7 @@ public class HeadquarterTask extends Task {
             rdb.initHqLocs();
             rdb.sendHqInfo();
             defenseAssignerTask.run();
+            expansionTask = new ExpansionTask(c);
         } else if (uc.getRound() == 2) {
             initSymmetryCandidates();
             defenseAssignerTask.run();
@@ -110,47 +96,13 @@ public class HeadquarterTask extends Task {
             }
 
             broadcastEnemyHq();
-            enlistAttackers();
+            enlistAttackersTask.run();
             packageAssignerTask.run();
             expansionTask.run();
 
 
 
         }
-    }
-
-    private void enlistAttackers() {
-        if (rdb.enemyHqSize == 0) {
-            return;
-        }
-        int nearestEnemyHqIdx = Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize);
-        Location targetHq = rdb.enemyHq[nearestEnemyHqIdx];
-        boolean canBoom = uc.getStructureInfo().getCarePackagesOfType(CarePackage.REINFORCED_SUIT) >= maxReinforcedSuits;
-        int singleAtkCost = (Vector2D.manhattanDistance(c.loc, targetHq) * 5 / 4) + 32;
-        canBoom = canBoom && uc.getStructureInfo().getOxygen() >= singleAtkCost * 8;
-
-        int countEnlist = 0;
-        for (Direction dir: c.getFirstDirs(c.loc.directionTo(targetHq))) {
-            if (c.uc.canEnlistAstronaut(dir, singleAtkCost, CarePackage.REINFORCED_SUIT)) {
-                countEnlist++;
-            }
-        }
-
-        canBoom = (canBoom && countEnlist >= (maxReinforcedSuits - 2)) || prevDeployReinforcedSuits;
-
-        if (!c.s.isReachableDirectly(targetHq) && !canBoom) {
-            prevDeployReinforcedSuits = false;
-            return;
-        }
-
-        c.logger.log("enlisting attackers with cost %d", singleAtkCost);
-        for (Direction dir: c.getFirstDirs(c.loc.directionTo(targetHq))) {
-            if (c.uc.canEnlistAstronaut(dir, singleAtkCost, CarePackage.REINFORCED_SUIT)) {
-                c.uc.enlistAstronaut(dir, singleAtkCost, CarePackage.REINFORCED_SUIT);
-            }
-        }
-        prevDeployReinforcedSuits = true;
-        maxReinforcedSuits = originalMaxReinforcedSuits;
     }
 
     private boolean enlistSymmetrySeeker() {
