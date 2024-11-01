@@ -16,6 +16,8 @@ build.xml
 # Ignore Gradle project-specific cache directory
 .gradle
 
+__pycache__/
+
 # Ignore Gradle build output directory
 build
 
