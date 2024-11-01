@@ -34,6 +34,7 @@ public class HeadquarterTask extends Task {
     Task expansionTask;
     Task enlistAttackersTask;
     Task enlistSuppressionTask;
+    Task jumpStrategyTask;
 
 
     HeadquarterTask(C c) {
@@ -52,7 +53,6 @@ public class HeadquarterTask extends Task {
         defenseAssignerTask = new DefenseAssginerTask(c);
         enlistAttackersTask = new EnlistAttackersTask(c);
         enlistSuppressionTask = new EnlistSuppressionTask(c);
-
         SYMMETRY_SEEK_COOLDOWN = Math.max(uc.getMapWidth() + 5, uc.getMapHeight() + 5);
     }
 
@@ -100,12 +100,18 @@ public class HeadquarterTask extends Task {
             }
             if (rdb.enemyHqSize == 0) {
                 while (enlistSymmetrySeeker()) {}
+            } else if (jumpStrategyTask == null) {
+                jumpStrategyTask = new JumpStrategyTask(c);
             }
 
             broadcastEnemyHq();
             enlistAttackersTask.run();
             expansionTask.run();
             packageAssignerTask.run();
+
+            if (rdb.enemyHqSize > 0) {
+                jumpStrategyTask.run();
+            }
             enlistSuppressionTask.run();
 
 

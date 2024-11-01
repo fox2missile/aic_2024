@@ -10,7 +10,7 @@ import kyuu.log.LoggerStandard;
 
 // C stands for Context
 public class C {
-    public final boolean DEBUG = false; // todo: surpression strategy
+    public final boolean DEBUG = false; // todo: better boom
     public UnitController uc;
     public Team team;
     public Team opponent;
@@ -136,7 +136,7 @@ public class C {
     }
 
     public boolean isObstacle(MapObject obj) {
-        return obj == MapObject.WATER || obj == MapObject.DOME || obj == MapObject.HYPERJUMP;
+        return obj == MapObject.WATER;
     }
 
     public int remainingSteps() {
