@@ -137,7 +137,7 @@ public class MoveTask extends Task {
                 Location landing = src.add(dir.dx * j, dir.dy * j);
                 int dist = landing.distanceSquared(c.destination);
                 if (dist < baselineDist && uc.canSenseLocation(landing) && !uc.isOutOfMap(landing)
-                        && !c.isObstacle(uc.senseObjectAtLocation(landing))
+                        && !c.isObstacle(uc.senseTileType(landing))
                         && uc.senseAstronaut(landing) == null
                         && uc.senseStructure(landing) == null) {
                     if (dist < bestDist) {

@@ -136,8 +136,8 @@ public class C {
         return new Location(loc.x / dc.SECTOR_SQUARE_SIZE, loc.y / dc.SECTOR_SQUARE_SIZE);
     }
 
-    public boolean isObstacle(MapObject obj) {
-        return obj == MapObject.WATER;
+    public boolean isObstacle(TileType tileType) {
+        return tileType == TileType.WATER;
     }
 
     public int remainingSteps() {
