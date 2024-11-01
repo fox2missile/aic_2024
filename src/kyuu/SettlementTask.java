@@ -9,7 +9,6 @@ import java.util.Iterator;
 
 public class SettlementTask extends Task {
 
-    final int spawnRound;
     Task defenseTask;
     Task expansionTask;
     Task packageAssignerTask;
@@ -23,9 +22,7 @@ public class SettlementTask extends Task {
         super(c);
         rdb.subscribeEnemyHq = true;
         rdb.subscribeSurveyComplete = true;
-        rdb.subscribeExpansionEstablished = true;
-        spawnRound = uc.getRound();
-        defenseTask = new DefenseAssginerTask(c);
+        rdb.subscribeExpansionEstablished = true;defenseTask = new DefenseAssginerTask(c);
         packageAssignerTask = new PackageAssignerTask(c);
         enlistAttackersTask = new EnlistAttackersTask(c);
         settlementStrategyTask = new SettlementStrategyTask(c);
@@ -50,17 +47,17 @@ public class SettlementTask extends Task {
 
         doActions();
 
-        if (uc.getRound() - spawnRound > 10) {
+        if (uc.getRound() - c.spawnRound > 10) {
             prevOxygen = uc.getStructureInfo().getOxygen();
         }
     }
 
     private void doActions() {
         defenseTask.run();
-        if (uc.getRound() == spawnRound) {
+        if (uc.getRound() == c.spawnRound) {
             // settlement must wait to receive all messages by the HQs
             return;
-        } else if (uc.getRound() == spawnRound + 1) {
+        } else if (uc.getRound() == c.spawnRound + 1) {
             rdb.introduceSettlement();
             rdb.newSettlementReceiver = (int __) -> {
                 BroadcastInfo idxBroadcast = uc.pollBroadcast();

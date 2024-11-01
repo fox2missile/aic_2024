@@ -17,13 +17,15 @@ public class C {
     public Logger logger;
     public Location destination = null;
     public int seed;
-
-    public float visionRange;
-    public int visionRangeStep;
-    public float actionRange;
+    public final int spawnRound;
+    public final float visionRange;
+    public final float visionRangeReduced1;
+    public final float visionRangeReduced2;
+    public final int visionRangeStep;
+    public final float actionRange;
     public Location loc;
-    public Location startLoc;
-    public int id;
+    public final Location startLoc;
+    public final int id;
     public Scanner s;
     public DbConst dc;
     public LocalDatabase ldb;
@@ -163,6 +165,8 @@ public class C {
             allFirstDirs[i][7] = first.opposite();
         }
 
+        id = unitController.getID();
+
         if (id % 4 == 0) {
             this.fourDirs = new Direction[]{
                     Direction.WEST, Direction.NORTH, Direction.EAST, Direction.SOUTH};
@@ -227,7 +231,6 @@ public class C {
 
 
         uc = unitController;
-        id = uc.getID();
         team = uc.getTeam();
         opponent = uc.getOpponent();
         dc = new DbConst();
@@ -245,9 +248,12 @@ public class C {
         seed = (int)(uc.getRandomDouble() * 100);
         loc = uc.getLocation();
         startLoc = uc.getLocation();
+        spawnRound = uc.getRound();
         s = new Scanner(this);
 
         visionRange = uc.isStructure() ? (uc.getType() == StructureType.HQ ? 64 : 49) : 25;
+        visionRangeReduced1 = uc.isStructure() ? (uc.getType() == StructureType.HQ ? 49 : 36) : 16;
+        visionRangeReduced2 = uc.isStructure() ? (uc.getType() == StructureType.HQ ? 36 : 25) : 9;
         visionRangeStep = (int)Math.sqrt(visionRange);
         actionRange = 2;
 

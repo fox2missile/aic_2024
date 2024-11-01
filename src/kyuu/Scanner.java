@@ -37,7 +37,7 @@ public class Scanner {
         this.c = c;
         this.uc = c.uc;
         this.obstaclesLength = 0;
-        this.obstacles = new MapObjectLocation[100];
+        this.obstacles = new MapObjectLocation[200];
         for (int i = 0; i < 100; i++) this.obstacles[i] = new MapObjectLocation();
         unreachableLocs = new FastLocSet();
         visibleAllies = new FastIntIntMap();
@@ -100,19 +100,28 @@ public class Scanner {
         visibleAlliesValid = false;
         visibleEnemies.clear();
         visibleEnemiesValid = false;
-        if (!prevLoc.equals(c.loc)) {
+        if (!prevLoc.equals(c.loc) || uc.getRound() == c.spawnRound) {
             unreachableLocs.clear();
-        }
-        obstaclesLength = 0;
-        for (MapObject type: c.obstacleObjectTypes) {
-            Location[] locs = uc.senseObjects(type, c.visionRange);
-            for (Location loc: locs) {
-                // out of range check ignored
-                obstacles[obstaclesLength].loc = loc;
-                obstacles[obstaclesLength].type = type;
-                obstaclesLength++;
+            obstaclesLength = 0;
+            for (MapObject type: c.obstacleObjectTypes) {
+                Location[] locs = uc.senseObjects(type, c.visionRange);
+                if (locs.length > 100) {
+                    locs = uc.senseObjects(type, c.visionRangeReduced1);
+                    if (locs.length > 100) {
+                        locs = uc.senseObjects(type, c.visionRangeReduced2);
+                    }
+                }
+                for (Location loc: locs) {
+                    if (obstaclesLength >= obstacles.length) {
+                        break;
+                    }
+                    obstacles[obstaclesLength].loc = loc;
+                    obstacles[obstaclesLength].type = type;
+                    obstaclesLength++;
+                }
             }
         }
+
         alliesTooClose = uc.senseAstronauts(8, c.team);
 
         immediateBlockers = 0;
