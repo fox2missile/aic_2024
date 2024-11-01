@@ -276,7 +276,7 @@ public class Scanner {
             for (int i = 0; i < c.allDirs.length; i++) {
                 Direction dir = c.allDirs[i];
                 Location check = c.loc.add(dir);
-                if (check.distanceSquared(target) > c.actionRange) {
+                if (check.distanceSquared(target) > c.actionRange || uc.isOutOfMap(check)) {
                     continue;
                 }
                 if (c.canMove(dir)) {
