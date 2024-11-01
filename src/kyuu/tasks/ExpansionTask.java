@@ -2,14 +2,9 @@ package kyuu.tasks;
 
 import aic2024.user.*;
 import kyuu.C;
-import kyuu.Vector2D;
 
 public class ExpansionTask extends Task {
 
-    int[] expansionSurveyState;
-
-
-    final Location[] expansionSites;
     final int COST_SURVEY = 20;
 
     final int EXPANSION_COOLDOWN_SLOW = 20;
@@ -26,20 +21,21 @@ public class ExpansionTask extends Task {
 
     int expansionCooldown;
 
+    int id;
+    Location expansionLoc;
 
-    public ExpansionTask(C c) {
+    public ExpansionTask(C c, Location loc, int localExpansionId) {
         super(c);
-        expansionSurveyState = new int[c.allDirs.length];
-        expansionSites = new Location[c.allDirs.length];
+        expansionLoc = loc;
+        id = localExpansionId;
         surveyorTimeout = new int[c.allDirs.length];
         for (int i = 0; i < c.allDirs.length; i++) {
             Direction dir = c.allDirs[i];;
-            expansionSites[i] = c.loc.add(dir.dx * 10, dir.dy * 10);
-            if (uc.isOutOfMap(expansionSites[i])) {
-                expansionSurveyState[i] = dc.SURVEY_BAD;
+            rdb.expansionSites[id][i] = c.loc.add(dir.dx * 10, dir.dy * 10);
+            if (uc.isOutOfMap(rdb.expansionSites[id][i])) {
+                rdb.surveyorStates[id][i] = dc.SURVEY_BAD;
             }
         }
-        rdb.surveySites = expansionSites;
         expansionWorkers = new int[c.allDirs.length];
         expansionTimeout = new int[c.allDirs.length];
         deepExpansion = new int[c.allDirs.length];
@@ -90,10 +86,7 @@ public class ExpansionTask extends Task {
 
     private void sendOutSurveyors() {
         for (int i = 0; i < c.allDirs.length; i++) {
-            if (rdb.surveyorState[i] != dc.SURVEY_NONE) {
-                expansionSurveyState[i] = rdb.surveyorState[i];
-            }
-            if (expansionSurveyState[i] != dc.SURVEY_NONE) {
+            if (rdb.surveyorStates[id][i] != dc.SURVEY_NONE) {
                 continue;
             }
             if (surveyorTimeout[i] > 0) {
@@ -103,7 +96,7 @@ public class ExpansionTask extends Task {
             for (Direction dir: c.getFirstDirs(c.allDirs[i])) {
                 if (uc.canEnlistAstronaut(dir, COST_SURVEY, null)) {
                     uc.enlistAstronaut(dir, COST_SURVEY, null);
-                    rdb.sendSurveyCommand(uc.senseAstronaut(c.loc.add(dir)).getID(), expansionSites[i]);
+                    rdb.sendSurveyCommand(uc.senseAstronaut(c.loc.add(dir)).getID(), rdb.expansionSites[id][i], id);
                     surveyorTimeout[i] = COST_SURVEY;
                     break;
                 }
@@ -113,7 +106,7 @@ public class ExpansionTask extends Task {
 
     private void sendExpansionWorkers() {
         for (int i = 0; i < c.allDirs.length; i++) {
-            if (expansionSurveyState[i] != dc.SURVEY_GOOD) {
+            if (rdb.surveyorStates[id][i] != dc.SURVEY_GOOD) {
                 continue;
             }
 
@@ -127,7 +120,7 @@ public class ExpansionTask extends Task {
                     continue;
                 }
                 int givenOxygen = 12;
-                if (rdb.expansionStates[i] == dc.EXPANSION_STATE_ESTABLISHED) {
+                if (rdb.expansionStates[id][i] == dc.EXPANSION_STATE_ESTABLISHED) {
                     if (uc.getStructureInfo().getOxygen() > 400 && deepExpansion[i] % 4 != 0) {
                         givenOxygen = 20;
                     } else {
@@ -140,9 +133,9 @@ public class ExpansionTask extends Task {
                     if (uc.canEnlistAstronaut(dir, givenOxygen, null)) {
                         uc.enlistAstronaut(dir, givenOxygen, null);
                         int enlistedId = uc.senseAstronaut(c.loc.add(dir)).getID();
-                        rdb.sendExpansionCommand(enlistedId, expansionSites[i], rdb.expansionStates[i]);
+                        rdb.sendExpansionCommand(enlistedId, rdb.expansionSites[id][i], rdb.expansionStates[id][i], id);
                         expansionWorkers[i] = enlistedId;
-                        if (rdb.expansionStates[i] == dc.EXPANSION_STATE_ESTABLISHED) {
+                        if (rdb.expansionStates[id][i] == dc.EXPANSION_STATE_ESTABLISHED) {
                             expansionTimeout[i] = expansionCooldown;
                         } else {
                             expansionTimeout[i] = 0;
@@ -158,18 +151,18 @@ public class ExpansionTask extends Task {
 
         // send package worker and defense worker after their primary work, prioritize established expansion
         for (int i = 0; i < c.allDirs.length && ldb.assignedThisRoundSize > 0; i++) {
-            if (expansionSurveyState[i] != dc.SURVEY_GOOD && rdb.expansionStates[i] != dc.EXPANSION_STATE_ESTABLISHED) {
+            if (rdb.surveyorStates[id][i] != dc.SURVEY_GOOD && rdb.expansionStates[id][i] != dc.EXPANSION_STATE_ESTABLISHED) {
                 continue;
             }
             int assign = ldb.popAssignedThisRound();
-            rdb.sendExpansionCommand(assign, expansionSites[i], rdb.expansionStates[i]);
+            rdb.sendExpansionCommand(assign, rdb.expansionSites[id][i], rdb.expansionStates[id][i], id);
         }
         for (int i = 0; i < c.allDirs.length && ldb.assignedThisRoundSize > 0; i++) {
-            if (expansionSurveyState[i] != dc.SURVEY_GOOD) {
+            if (rdb.surveyorStates[id][i] != dc.SURVEY_GOOD) {
                 continue;
             }
             int assign = ldb.popAssignedThisRound();
-            rdb.sendExpansionCommand(assign, expansionSites[i], rdb.expansionStates[i]);
+            rdb.sendExpansionCommand(assign, rdb.expansionSites[id][i], rdb.expansionStates[id][i], id);
         }
     }
 }

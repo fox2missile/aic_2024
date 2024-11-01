@@ -50,10 +50,11 @@ public class HeadquarterTask extends Task {
         rdb.subscribeSeekSymmetryCommand = true;
         rdb.subscribeSurveyComplete = true;
         rdb.subscribeExpansionEstablished = true;
+        rdb.initExpansionData();
         packageSearch = ParallelSearch.getDefaultSearch(c);
         packageAssignerTask = new PackageAssignerTask(c);
         defenseAssignerTask = new DefenseAssginerTask(c);
-        expansionTask = new ExpansionTask(c);
+        expansionTask = new ExpansionTask(c, c.loc, 0);
         maxReinforcedSuits = 0;
         for (Direction dir: c.allDirs) {
             Location check = c.loc.add(dir);
