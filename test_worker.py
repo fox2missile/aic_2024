@@ -30,14 +30,15 @@ class TestWorker:
             '-Dpackage1=' + match.player_1,
             '-Dpackage2=' + match.player_2,
             '-Dreplay=' + replay_file,
-            'run_no_setup'], stdout=subprocess.PIPE)
+            'run_replay'], stdout=subprocess.PIPE)
         output = result.stdout.decode('utf-8').split('\n')
-        # print(output)
+        # for o in output:
+        #     print(o)
         winner = None
         side = None
         reason = None
         reason_find_str = 'WinCondition: '
-        for i in range(-1, -20, -1):
+        for i in range(len(output)):
             if 'Winner' in output[i]:
                 print(output[i].split())
                 _, _, winner, _, side = output[i].split()

@@ -23,43 +23,25 @@ class TestServer:
         self.id = datetime.now().strftime("%Y-%m-%d %H:%M")
         self.lock_result = lock.Lock(self.redis, get_result_lock_key(self.id))
         all_maps = [
-            # 'A',
-            # 'Basic1',
-            # 'Basic2',
-            # 'Basic3',
-            'Capsules',
-            'Chains',
-            'Circle',
-            'CloseHQs',
-            # 'Comb',
-            # 'FastPaced',
-            # 'Flooded',
-            # 'FreeForAll',
-            # 'HiddenBase',
-            # 'Keys',
-            # 'KingOfTheHill',
-            # 'Labyrinth',
-            # 'LightPolarizer',
-            # 'MiniGrid',
-            # 'OneTwoTree',
-            # 'OneVsOne',
-            # 'Riverside',
-            # 'SandsOfTime',
-            # 'ShortOnReputation',
-            # 'Smol',
-            # 'Spiral',
-            'Squares',
-            'SumonersRift',
+            '3vs3',
+            'AlmostClosed',
+            'Basic1',
+            'Basic2',
+            'Basic3',
+            'BetterCallSpaceGames',
+            'BTD7Logs',
+            'Crowded',
+            'FightForTheMiddle',
+            'HotBorder',
+            'HotMap',
+            'JumpAndKill',
+            'Love',
+            'Moniato',
+            'RealBasic',
+            'Shapes',
+            'SummonersRift',
             'SwimmingPool',
-            'TinySplit',
-            'TinyTiny',
-            'ToughDecision',
-            'TunnelVision',
-            'Weirdo',
-            'WhereYouSpawn',
-            'X',
             'xdd',
-            'ZigZag',
         ]
 
         self.maps: List[str] = []
@@ -145,7 +127,7 @@ class TestServer:
 if __name__ == '__main__':
     test_players_ = sys.argv[1].split(',')
     map_coverage_ = int(sys.argv[2])
-    main_player = 'kyuu_pathfind'
+    main_player = 'kyuu'
     if len(sys.argv) >= 4:
         main_player = sys.argv[3]
     server = TestServer(test_players_, map_coverage_, main_player)
