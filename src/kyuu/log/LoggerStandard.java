@@ -14,8 +14,8 @@ public class LoggerStandard implements Logger {
 
     @Override
     public void log(String format, Object... args) {
-        String prefix = String.format("[%s#%d@%d]: ",
-                mCtrl.isStructure() ? mCtrl.getType().toString() : "ASTRONAUT", mCtrl.getID(), mCtrl.getRound());
+        String prefix = String.format("[%s#%s%d@%d]: ",
+                mCtrl.isStructure() ? mCtrl.getType().toString() : "ASTRONAUT", mCtrl.getTeam(), mCtrl.getID(), mCtrl.getRound());
         String str = String.format(format, args);
         mCtrl.println(prefix + str);
     }

@@ -1,9 +1,6 @@
 package kyuu.tasks;
 
-import aic2024.user.CarePackage;
-import aic2024.user.CarePackageInfo;
-import aic2024.user.Direction;
-import aic2024.user.Location;
+import aic2024.user.*;
 import kyuu.C;
 import kyuu.Vector2D;
 import kyuu.fast.FastLocSet;
@@ -13,9 +10,34 @@ public class PackageAssignerTask extends Task {
 
     FastLocSet wantedPackages;
 
+    final int[] defaultScores = {
+            100, //SETTLEMENT
+            2, //DOME
+            10, //HYPERJUMP
+            -1, //RADIO
+            200, //REINFORCED_SUIT
+            50, //SURVIVAL_KIT
+            200, //OXYGEN_TANK
+            400, //PLANTS
+    };
+
+    final int[] settlementDefaultScores = {
+            100, //SETTLEMENT
+            -1, //DOME
+            10, //HYPERJUMP
+            -1, //RADIO
+            200, //REINFORCED_SUIT
+            -1, //SURVIVAL_KIT
+            200, //OXYGEN_TANK
+            400, //PLANTS
+    };
+
+    int[] scoreMap;
+
     public PackageAssignerTask(C c) {
         super(c);
         wantedPackages = new FastLocSet();
+        scoreMap = uc.getStructureInfo().getType() == StructureType.HQ ? defaultScores : settlementDefaultScores;
     }
 
     @Override
@@ -26,16 +48,20 @@ public class PackageAssignerTask extends Task {
     }
 
     private void adjustPriority() {
-        int[] prio = new int[CarePackage.values().length];
-        if (uc.getStructureInfo().getCarePackagesOfType(CarePackage.RADIO) > 5) {
-            prio[CarePackage.RADIO.ordinal()] -= 1000;
+        if (ldb.oxygenProductionRate >= 5) {
+            scoreMap = defaultScores;
+            int[] prio = new int[CarePackage.values().length];
+            if (uc.getStructureInfo().getCarePackagesOfType(CarePackage.RADIO) > 5) {
+                prio[CarePackage.RADIO.ordinal()] -= 1000;
+            }
+            if (uc.getStructureInfo().getCarePackagesOfType(CarePackage.REINFORCED_SUIT) > 30) {
+                prio[CarePackage.REINFORCED_SUIT.ordinal()] -= 100;
+                prio[CarePackage.OXYGEN_TANK.ordinal()] += 100;
+            }
+            prio[CarePackage.HYPERJUMP.ordinal()] += (10 * (ldb.neededHyperJumps - uc.getStructureInfo().getCarePackagesOfType(CarePackage.HYPERJUMP)));
+            rdb.sendPackagePriorityNotice(prio);
         }
-        if (uc.getStructureInfo().getCarePackagesOfType(CarePackage.REINFORCED_SUIT) > 30) {
-            prio[CarePackage.REINFORCED_SUIT.ordinal()] -= 100;
-            prio[CarePackage.OXYGEN_TANK.ordinal()] += 100;
-        }
-        prio[CarePackage.HYPERJUMP.ordinal()] += (10 * (ldb.neededHyperJumps - uc.getStructureInfo().getCarePackagesOfType(CarePackage.HYPERJUMP)));
-        rdb.sendPackagePriorityNotice(prio);
+
     }
 
     private boolean getPackages() {
@@ -94,25 +120,13 @@ public class PackageAssignerTask extends Task {
         return false;
     }
 
-    private static int getPaxScore(CarePackageInfo pax, int dist) {
+    private int getPaxScore(CarePackageInfo pax, int dist) {
         int score = 1 - (dist * dist);
         CarePackage carePackageType = pax.getCarePackageType();
-        if (carePackageType == CarePackage.SETTLEMENT) {
-            score += 300;
-        } else if (carePackageType == CarePackage.DOME) {
-            score += 10;
-        } else if (carePackageType == CarePackage.HYPERJUMP) {
-            score += 10;
-        } else if (carePackageType == CarePackage.RADIO) {
-            score += 10;
-        } else if (carePackageType == CarePackage.REINFORCED_SUIT) {
-            score += 50;
-        } else if (carePackageType == CarePackage.SURVIVAL_KIT) {
-            score += 50;
-        } else if (carePackageType == CarePackage.OXYGEN_TANK) {
-            score += 150;
-        } else if (carePackageType == CarePackage.PLANTS) {
-            score += 200;
+        if (carePackageType == CarePackage.PLANTS) {
+            score += (1000 - uc.getRound());
+        } else {
+            score += scoreMap[carePackageType.ordinal()];
         }
         return score;
     }

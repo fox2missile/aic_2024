@@ -1,9 +1,12 @@
 package kyuu.db;
 
 import aic2024.user.Location;
+import aic2024.user.StructureType;
 import kyuu.C;
 import kyuu.fast.FastLocIntMap;
 import kyuu.fast.FastLocStack;
+
+import java.util.Iterator;
 
 public class LocalDatabase extends Database {
 
@@ -27,6 +30,13 @@ public class LocalDatabase extends Database {
 
     public int neededHyperJumps;
 
+    public Expansion rootExpansion;
+    public Expansion[] expansionsDepth1; // may expand again
+    public int expansionsDepth1Size;
+    public Expansion[] expansionsDepth2; // cannot expand again
+    public int expansionsDepth2Size;
+    public float oxygenProductionRate;
+
     public LocalDatabase(C c) {
         super(c);
         this.sectorStatusMap = new FastLocIntMap();
@@ -34,6 +44,42 @@ public class LocalDatabase extends Database {
         this.assignedThisRoundSize = 0;
         this.pendingExploreStack = new FastLocStack(20);
         this.neededHyperJumps = 0;
+        this.oxygenProductionRate = uc.isStructure() && uc.getStructureInfo().getType() == StructureType.HQ ? 5 : 0;
+    }
+
+    public void allocateExpansionData() {
+        rootExpansion = new Expansion(c, c.loc, 0, -1, 0, null);
+        expansionsDepth1 = new Expansion[8];
+        expansionsDepth1Size = 0;
+        expansionsDepth2 = new Expansion[16];
+        expansionsDepth2Size = 0;
+    }
+
+    public Iterator<Expansion> iterateExpansions() {
+        return new Iterator<Expansion>() {
+
+            boolean rootExpansionGiven = false;
+            int currentDepth1 = 0;
+            @Override
+            public boolean hasNext() {
+                if (!rootExpansionGiven) {
+                    return rootExpansion != null;
+                }
+                return currentDepth1 < expansionsDepth1Size;
+            }
+
+            @Override
+            public Expansion next() {
+                if (!rootExpansionGiven) {
+                    rootExpansionGiven = true;
+                    return rootExpansion;
+                }
+                if (currentDepth1 < expansionsDepth1Size) {
+                    return expansionsDepth1[currentDepth1++];
+                }
+                return null;
+            }
+        };
     }
 
     public boolean isHorizontalSymmetry() {

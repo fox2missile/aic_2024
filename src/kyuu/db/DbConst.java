@@ -8,6 +8,8 @@ public class DbConst {
 
     public final int MAX_MAP_OFFSET = 1000;
 
+    public final int MAX_BASES = 20;
+
     // sector properties: constants
     public final int SECTOR_SQUARE_SIZE = 5;
     public final int SECTOR_MAX_LENGTH = (MAX_MAP_OFFSET / SECTOR_SQUARE_SIZE) +
@@ -42,7 +44,7 @@ public class DbConst {
     public final int MAX_HQ = 3;
     public final Location INVALID_LOCATION = new Location(GameConstants.MAX_MAP_SIZE, GameConstants.MAX_MAP_SIZE);
 
-    public final int EXPANSION_SIZE = 25;
+    public final int EXPANSION_SIZE = 9;
 
     // MSG_ID_SURVEY_CMD
     public final int MSG_SIZE_SURVEY_CMD = 11;
@@ -63,6 +65,9 @@ public class DbConst {
     public final int MSG_SIZE_BUILD_DOME_CMD = 11;
     // {builder id, x, y, expansion id, path size (loc), path1.x, path1.y, path2.x, path2.y, path3.x, path3.y }
 
+    // MSG_ID_SETTLEMENT_CMD
+    public final int MSG_SIZE_SETTLEMENT_CMD = 11;
+    // {settler id, companion id, x, y, path size (loc), path1.x, path1.y, path2.x, path2.y, path3.x, path3.y }
 
     // MSG_ID_BUILD_HYPER_JUMP_CMD
     public final int MSG_SIZE_BUILD_HYPER_JUMP_CMD = 3;
@@ -75,6 +80,11 @@ public class DbConst {
     // {suppressor id, x, y}
 
     public final int MSG_SIZE_PACKAGE_PRIORITY_MAP = CarePackage.values().length;
+
+    public final int MSG_SIZE_BASE_HEARTBEAT = 1;
+    // {baseIdx}
+    public final int MSG_SIZE_NEW_SETTLEMENT = 1;
+    // {baseIdx}
 
 
     // MSG_ID_SYMMETRIC_SEEKER_COMPLETE
@@ -141,6 +151,8 @@ public class DbConst {
     public final int MSG_ID_EXPANSION_MISSED = MSG_ID_BEGIN - 20;
     public final int MSG_ID_BUILD_HYPER_JUMP_CMD = MSG_ID_BEGIN - 21;
     public final int MSG_ID_SUPPRESSION_CMD = MSG_ID_BEGIN - 22;
-
     public final int MSG_ID_PACKAGE_PRIORITY_MAP = MSG_ID_BEGIN - 23;
+    public final int MSG_ID_SETTLEMENT_CMD = MSG_ID_BEGIN - 24;
+    public final int MSG_ID_BASE_HEARTBEAT = MSG_ID_BEGIN - 25;
+    public final int MSG_ID_NEW_SETTLEMENT = MSG_ID_BEGIN - 26;
 }

@@ -26,15 +26,12 @@ public class FastLocIntMap {
     public void addReplace(Location loc, int val) {
         String key = locToStr(loc);
         int index = keys.indexOf(key);
-        switch (index) {
-            case -1:
-                keys.append(key);
-                keys.append((char) (val + 0x100));
-                size++;
-                break;
-            default:
-                keys.setCharAt(index + 2, (char) (val + 0x100));
-                break;
+        if (index == -1) {
+            keys.append(key);
+            keys.append((char) (val + 0x100));
+            size++;
+        } else {
+            keys.setCharAt(index + 2, (char) (val + 0x100));
         }
     }
 

@@ -32,6 +32,9 @@ public class EnlistAttackersTask extends Task {
 
     @Override
     public void run() {
+        if (ldb.oxygenProductionRate < 3) {
+            return;
+        }
         enlistAttackers();
     }
 

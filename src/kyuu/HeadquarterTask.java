@@ -2,10 +2,12 @@ package kyuu;
 
 
 import aic2024.user.*;
-import kyuu.fast.FastLocSet;
+import kyuu.db.Expansion;
 import kyuu.message.*;
 import kyuu.pathfinder.ParallelSearch;
 import kyuu.tasks.*;
+
+import java.util.Iterator;
 
 public class HeadquarterTask extends Task {
 
@@ -25,19 +27,59 @@ public class HeadquarterTask extends Task {
     Task enlistSuppressorsTask;
     Task jumpStrategyTask;
 
+    Task settlementStrategyTask;
+
+    float prevOxygen;
+
 
     HeadquarterTask(C c) {
         super(c);
         rdb.subscribeEnemyHq = true;
         rdb.subscribeSurveyComplete = true;
         rdb.subscribeExpansionEstablished = true;
-        rdb.initExpansionData();
         packageSearch = ParallelSearch.getDefaultSearch(c);
         packageAssignerTask = new PackageAssignerTask(c);
         defenseAssignerTask = new DefenseAssginerTask(c);
         enlistAttackersTask = new EnlistAttackersTask(c);
         enlistSuppressorsTask = new EnlistSuppressorsTask(c);
         symmetrySeekerAssignerTask = new SymmetrySeekerAssignerTask(c);
+        settlementStrategyTask = new SettlementStrategyTask(c);
+        jumpStrategyTask = new JumpStrategyTask(c);
+        prevOxygen = -1;
+        rdb.newSettlementReceiver = (int __) -> {
+            BroadcastInfo idxBroadcast = uc.pollBroadcast();
+            Location settlementLoc = idxBroadcast.getLocation();
+            int idx = idxBroadcast.getMessage();
+            if (rdb.baseLocs[idx] != null) {
+                c.logger.log("warning: inconsistencies");
+            }
+            rdb.baseLocs[idx] = settlementLoc;
+            rdb.baseCount++;
+            c.logger.log("New settlement at %s", settlementLoc);
+
+            // todo: transfer all the expansion to the settlement
+            // for now just mark the expansion as bad
+            for (Iterator<Expansion> it = ldb.iterateExpansions(); it.hasNext(); ) {
+                Expansion ex = it.next();
+                if (Vector2D.chebysevDistance(ex.expansionLoc, settlementLoc) < 5) {
+                    for (int i = 0; i < c.allDirs.length; i++) {
+                        rdb.surveyorStates[ex.id][i] = dc.SURVEY_BAD;
+                        rdb.lastBadSurvey[ex.id][i] = -1;
+                    }
+                } else {
+                    for (int i = 0; i < c.allDirs.length; i++) {
+                        if (rdb.expansionSites[ex.id][i] == null) {
+                            continue;
+                        }
+                        if (Vector2D.chebysevDistance(rdb.expansionSites[ex.id][i], settlementLoc) < 5) {
+                            rdb.surveyorStates[ex.id][i] = dc.SURVEY_BAD;
+                            rdb.lastBadSurvey[ex.id][i] = -1;
+                        }
+                    }
+                }
+
+            }
+        };
     }
 
 
@@ -50,13 +92,23 @@ public class HeadquarterTask extends Task {
         ldb.minReserveEnlistSlot = 0;
         ldb.resetAssignedThisRound();
 
+        if (prevOxygen != -1) {
+            ldb.oxygenProductionRate = uc.getStructureInfo().getOxygen() - prevOxygen;
+        }
 
+        doActions();
+
+        prevOxygen = uc.getStructureInfo().getOxygen();
+
+    }
+
+    private void doActions() {
         if (uc.getRound() == 0) {
-            rdb.sendHqInfo();
+            rdb.introduceHq();
             handleEarlyPlantsGatherer();
         } else if (uc.getRound() == 1) {
             rdb.initHqLocs();
-            rdb.sendHqInfo();
+            rdb.introduceHq();
             defenseAssignerTask.run();
             expansionTask = new ExpansionTask(c);
         } else if (uc.getRound() == 2) {
@@ -77,20 +129,22 @@ public class HeadquarterTask extends Task {
             }
             if (rdb.enemyHqSize == 0) {
                 symmetrySeekerAssignerTask.run();
-            } else if (jumpStrategyTask == null) {
-                jumpStrategyTask = new JumpStrategyTask(c);
             }
-
+            rdb.sendBaseHeartbeat();
             broadcastEnemyHq();
+            settlementStrategyTask.run();
             enlistAttackersTask.run();
             expansionTask.run();
             packageAssignerTask.run();
 
-            if (rdb.enemyHqSize > 0) {
-                jumpStrategyTask.run();
-            }
+            jumpStrategyTask.run();
+
             enlistSuppressorsTask.run();
 
+//            for (Iterator<Location> it = rdb.recentDangerSectors.getBackIterator(); it.hasNext(); ) {
+//                Location sector = it.next();
+//                uc.drawPointDebug(c.getSectorCenter(sector), 255, 127, 0);
+//            }
 
         }
     }
