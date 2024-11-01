@@ -251,4 +251,88 @@ public class Scanner {
 
         return value;
     }
+
+    public void attackEnemyBaseDirectly(Location target) {
+        while (uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1)) {
+            uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1);
+        }
+    }
+
+    public void attackEnemyBaseStepNeeded(Location target) {
+        if (uc.getAstronautInfo().getCurrentMovementCooldown() < 1.0) {
+            // attempt kill this round
+
+            int[] directionScore = new int[c.allDirs.length];
+
+            for (int i = 0; i < c.allDirs.length; i++) {
+                Direction dir = c.allDirs[i];
+                Location check = c.loc.add(dir);
+                if (check.distanceSquared(target) > c.actionRange) {
+                    continue;
+                }
+                if (c.canMove(dir)) {
+                    directionScore[i] = 1000;
+                    break;
+                }
+
+                AstronautInfo a = uc.senseAstronaut(check);
+                if (a == null || a.getTeam() == c.team) {
+                    // water tile or ally
+                    continue;
+                }
+
+                StructureInfo s = uc.senseStructure(check);
+                if (s != null && s.getTeam() == c.opponent) {
+                    while (uc.canPerformAction(ActionType.SABOTAGE, dir, 1)) {
+                        uc.performAction(ActionType.SABOTAGE, dir, 1);
+                    }
+                    s = uc.senseStructure(check);
+                    if (s == null) {
+                        directionScore[i] = 1000;
+                        break;
+                    } else {
+                        directionScore[i] = 0;
+                        continue;
+                    }
+                }
+
+                // there is an enemy astronaut here
+                directionScore[i] = 500;
+
+                if (a.getCarePackage() == CarePackage.REINFORCED_SUIT) {
+                    if (uc.getAstronautInfo().getCarePackage() != CarePackage.REINFORCED_SUIT) {
+                        directionScore[i] = 0;
+                        continue;
+                    }
+                    if (c.bitCount((int)a.getOxygen()) >= c.bitCount((int)uc.getAstronautInfo().getOxygen())) {
+                        // both reinforced but they are stronger
+                        directionScore[i] = 0;
+                        continue;
+                    }
+                    directionScore[i] -= (int)a.getOxygen();
+                }
+            }
+
+            int bestDirIdx = 0;
+            for (int i = 1; i < c.allDirs.length; i++) {
+                if (directionScore[i] > directionScore[bestDirIdx]) {
+                    bestDirIdx = i;
+                }
+            }
+            if (directionScore[bestDirIdx] > 0) {
+                Direction bestDir = c.allDirs[bestDirIdx];
+                // best dir is either empty or there is an astronaut
+                while (uc.canPerformAction(ActionType.SABOTAGE, bestDir, 1)) {
+                    uc.performAction(ActionType.SABOTAGE, bestDir, 1);
+                }
+                if (c.canMove(bestDir)) {
+                    c.move(bestDir);
+                    Direction targetDir = c.loc.directionTo(target);
+                    while (uc.canPerformAction(ActionType.SABOTAGE, targetDir, 1)) {
+                        uc.performAction(ActionType.SABOTAGE, targetDir, 1);
+                    }
+                }
+            }
+        }
+    }
 }

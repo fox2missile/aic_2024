@@ -487,6 +487,15 @@ public class RemoteDatabase extends Database {
         enemyHqSize = 0;
     }
 
+    public boolean isKnownEnemyHq(Location loc) {
+        for (int i = 0; i < enemyHqSize; i++) {
+            if (loc.equals(enemyHq[i])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean addEnemyHq(Location loc) {
         boolean found = false;
         for (int i = 0; i < enemyHqSize; i++) {
