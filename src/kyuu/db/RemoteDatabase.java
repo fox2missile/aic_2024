@@ -623,7 +623,7 @@ public class RemoteDatabase extends Database {
             sectorSumDist.addReplace(reportSector, sumDist);
             int avg = sumDist / count;
             sectorAvgDist.addReplace(reportSector, avg);
-            c.loggerAlways.log("Estimated dist to %s is %d rounds", b.getLocation(), avg);
+//            c.loggerAlways.log("Estimated dist to %s is %d rounds", b.getLocation(), avg);
         }
     }
 

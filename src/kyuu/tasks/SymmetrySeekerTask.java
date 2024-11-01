@@ -48,9 +48,9 @@ public class SymmetrySeekerTask extends Task {
 
     @Override
     public void run() {
-        dH = 5;
-        dV = 5;
-        dR = 5;
+        dH = 0;
+        dV = 0;
+        dR = 0;
         if (rdb.enemyHqSize > 0) {
             for (int i = 0; i < rdb.enemyHqSize; i++) {
                 if (rdb.enemyHq[i].equals(cmd.target)) {

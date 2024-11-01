@@ -27,6 +27,7 @@ public class LocalDatabase extends Database {
 
 
     public Location[] symmetryCandidates;
+    public boolean[] symmetryComplete;
 
     public int neededHyperJumps;
 
@@ -51,7 +52,7 @@ public class LocalDatabase extends Database {
         rootExpansion = new Expansion(c, c.loc, 0, -1, 0, null);
         expansionsDepth1 = new Expansion[8];
         expansionsDepth1Size = 0;
-        expansionsDepth2 = new Expansion[16];
+        expansionsDepth2 = new Expansion[8];
         expansionsDepth2Size = 0;
     }
 
@@ -60,12 +61,13 @@ public class LocalDatabase extends Database {
 
             boolean rootExpansionGiven = false;
             int currentDepth1 = 0;
+            int currentDepth2 = 0;
             @Override
             public boolean hasNext() {
                 if (!rootExpansionGiven) {
                     return rootExpansion != null;
                 }
-                return currentDepth1 < expansionsDepth1Size;
+                return currentDepth1 < expansionsDepth1Size || currentDepth2 < expansionsDepth2Size;
             }
 
             @Override
@@ -76,6 +78,9 @@ public class LocalDatabase extends Database {
                 }
                 if (currentDepth1 < expansionsDepth1Size) {
                     return expansionsDepth1[currentDepth1++];
+                }
+                if (currentDepth2 < expansionsDepth2Size) {
+                    return expansionsDepth2[currentDepth2++];
                 }
                 return null;
             }

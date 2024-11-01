@@ -8,7 +8,7 @@ public class DbConst {
 
     public final int MAX_MAP_OFFSET = 1000;
 
-    public final int MAX_BASES = 20;
+    public final int MAX_BASES = 15;
 
     // sector properties: constants
     public final int SECTOR_SQUARE_SIZE = 5;
@@ -44,7 +44,7 @@ public class DbConst {
     public final int MAX_HQ = 3;
     public final Location INVALID_LOCATION = new Location(GameConstants.MAX_MAP_SIZE, GameConstants.MAX_MAP_SIZE);
 
-    public final int EXPANSION_SIZE = 9;
+    public final int EXPANSION_SIZE = 17;
 
     // MSG_ID_SURVEY_CMD
     public final int MSG_SIZE_SURVEY_CMD = 11;

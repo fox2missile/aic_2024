@@ -85,7 +85,7 @@ public class Expansion {
                 if (c.rdb.baseLocs[h].equals(c.loc)) {
                     continue;
                 }
-                if (Vector2D.chebysevDistance(c.rdb.baseLocs[h],c.rdb.expansionSites[id][i]) < 10) {
+                if (c.rdb.expansionSites[id][i].distanceSquared(c.rdb.baseLocs[h]) < 8 * 8 || (depth > 0 && c.rdb.expansionSites[id][i].distanceSquared(c.rdb.baseLocs[h]) < c.rdb.expansionSites[id][i].distanceSquared(c.loc))) {
                     c.rdb.surveyorStates[id][i] = c.dc.SURVEY_BAD;
                     c.rdb.lastBadSurvey[id][i] = -1;
                 }

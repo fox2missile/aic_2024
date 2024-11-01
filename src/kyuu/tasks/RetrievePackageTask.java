@@ -82,6 +82,19 @@ public class RetrievePackageTask extends Task {
         }, c.visionRange);
     }
 
+    public static RetrievePackageTask createSettlementPaxGatheringTask(C c) {
+        return new RetrievePackageTask(c, new int[]{
+                100, //SETTLEMENT
+                -1, //DOME
+                -1, //HYPERJUMP
+                -1, //RADIO
+                -1, //REINFORCED_SUIT
+                -1, //SURVIVAL_KIT
+                -1, //OXYGEN_TANK
+                -1, //PLANTS
+        }, c.visionRange);
+    }
+
     @Override
     public void run() {
         if (target != null) {

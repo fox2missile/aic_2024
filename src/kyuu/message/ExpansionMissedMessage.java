@@ -7,5 +7,6 @@ public class ExpansionMissedMessage extends LocationMessage {
 
     public ExpansionMissedMessage(Location target, int expansionId) {
         super(target);
+        this.expansionId = expansionId;
     }
 }

@@ -10,7 +10,6 @@ public class SymmetrySeekerAssignerTask extends Task {
 
 
     boolean[] symmetryAssigned;
-    boolean[] symmetryComplete;
 
     int[] symmetrySeekAttempts;
     int[] symmetrySeekTimeout;
@@ -67,7 +66,7 @@ public class SymmetrySeekerAssignerTask extends Task {
             return false;
         }
         for (int i = 0; i < ldb.symmetryCandidates.length; i++) {
-            if (symmetryComplete[i]) {
+            if (ldb.symmetryComplete[i]) {
                 continue;
             }
             if (symmetryAssigned[i]) {
@@ -119,8 +118,8 @@ public class SymmetrySeekerAssignerTask extends Task {
 
     public void initSymmetryCandidates() {
         ldb.symmetryCandidates = new Location[rdb.baseCount * 3];
+        ldb.symmetryComplete = new boolean[rdb.baseCount * 3];
         symmetryAssigned = new boolean[rdb.baseCount * 3];
-        symmetryComplete = new boolean[rdb.baseCount * 3];
         symmetrySeekAttempts = new int[rdb.baseCount * 3];
         symmetrySeekTimeout = new int[rdb.baseCount * 3];
         FastLocSet symSet = new FastLocSet();
@@ -201,14 +200,14 @@ public class SymmetrySeekerAssignerTask extends Task {
         } else if (status == dc.SYMMETRIC_SEEKER_COMPLETE_FOUND_HQ) {
             symmetryAssigned[symIdx] = true;
             c.logger.log("FOUND ENEMY HQ: %s", target);
-            symmetryComplete[symIdx] = true;
+            ldb.symmetryComplete[symIdx] = true;
 
             rdb.addEnemyHq(ldb.symmetryCandidates[symIdx]);
         } else {
             for (int i = 0; i < ldb.symmetryCandidates.length; i++) {
                 if (i % 3 == symIdx % 3) {
                     symmetryAssigned[i] = true;
-                    symmetryComplete[symIdx] = true;
+                    ldb.symmetryComplete[symIdx] = true;
                 }
             }
             if (symIdx % 3 == dc.SYMMETRY_HORIZONTAL) {
