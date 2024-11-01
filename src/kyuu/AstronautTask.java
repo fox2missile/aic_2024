@@ -2,7 +2,6 @@ package kyuu;
 
 import aic2024.user.*;
 import kyuu.message.*;
-import kyuu.pathfinder.NaivePathFinder;
 import kyuu.tasks.MoveTask;
 import kyuu.tasks.RetrievePackageTask;
 import kyuu.tasks.ScanSectorTask;
@@ -17,8 +16,11 @@ public class AstronautTask extends Task {
     Task scanSectorTask;
     Task retrievePaxTask;
 
-    SeekSymmetryCommand currentSeekSymmetryCommand;
+    SeekSymmetryCommand currentSymmetryCmd;
     RetrievePackageCommand currentRetPaxCmd;
+    DefenseCommand currentDefCmd;
+
+    private final int initialOxygen;
 
     public AstronautTask(C c) {
         super(c);
@@ -29,6 +31,7 @@ public class AstronautTask extends Task {
         rdb.subscribeSeekSymmetryCommand = true;
         rdb.subscribeEnemyHq = true;
         rdb.subscribePackageRetrievalCommand = true;
+        initialOxygen = (int)Math.floor(uc.getAstronautInfo().getOxygen());
         c.logger.log("Spawn");
     }
 
@@ -41,11 +44,13 @@ public class AstronautTask extends Task {
         Message msg = rdb.retrieveNextMessage();
         while (msg != null) {
             if (msg instanceof SeekSymmetryCommand && rdb.enemyHqSize == 0) {
-                currentSeekSymmetryCommand = (SeekSymmetryCommand)msg;
+                currentSymmetryCmd = (SeekSymmetryCommand)msg;
             } else if (msg instanceof EnemyHqMessage) {
-                currentSeekSymmetryCommand = null;
+                currentSymmetryCmd = null;
             } else if (msg instanceof RetrievePackageCommand) {
                 currentRetPaxCmd = (RetrievePackageCommand) msg;
+            } else if (msg instanceof DefenseCommand) {
+                currentDefCmd = (DefenseCommand) msg;
             }
             msg = rdb.retrieveNextMessage();
         }
@@ -53,12 +58,16 @@ public class AstronautTask extends Task {
 
         seekUnknownEnemyHq();
 
-        if (currentSeekSymmetryCommand != null) {
+        if (currentDefCmd != null) {
+            handleDefense();
+        } else if (currentSymmetryCmd != null) {
             handleSymmetrySeekCmd();
         } else if (currentRetPaxCmd != null) {
             handleRetrievePax();
         }else if (rdb.enemyHqSize > 0) {
-            attackEnemyHq();
+            if (!attackEnemyHq()) {
+                handleFreeRoam();
+            }
         } else {
             handleFreeRoam();
         }
@@ -91,22 +100,22 @@ public class AstronautTask extends Task {
     }
 
     private void handleSymmetrySeekCmd() {
-        if (!uc.canSenseLocation(currentSeekSymmetryCommand.target)) {
+        if (!uc.canSenseLocation(currentSymmetryCmd.target)) {
             if (uc.getAstronautInfo().getOxygen() < 2) {
-                SeekSymmetryComplete msg = new SeekSymmetryComplete(currentSeekSymmetryCommand.target, dc.SYMMETRIC_SEEKER_COMPLETE_FAILED);
+                SeekSymmetryComplete msg = new SeekSymmetryComplete(currentSymmetryCmd.target, dc.SYMMETRIC_SEEKER_COMPLETE_FAILED);
                 rdb.sendSeekSymmetryCompleteMsg(msg);
                 c.destination = null;
-                currentSeekSymmetryCommand = null;
+                currentSymmetryCmd = null;
             } else {
-                c.destination = currentSeekSymmetryCommand.target;
+                c.destination = currentSymmetryCmd.target;
             }
         } else {
-            StructureInfo s = uc.senseStructure(currentSeekSymmetryCommand.target);
+            StructureInfo s = uc.senseStructure(currentSymmetryCmd.target);
             int status = s != null && s.getType() == StructureType.HQ && s.getTeam() != c.team ? dc.SYMMETRIC_SEEKER_COMPLETE_FOUND_HQ : dc.SYMMETRIC_SEEKER_COMPLETE_FOUND_NOTHING;
-            SeekSymmetryComplete msg = new SeekSymmetryComplete(currentSeekSymmetryCommand.target, status);
+            SeekSymmetryComplete msg = new SeekSymmetryComplete(currentSymmetryCmd.target, status);
             rdb.sendSeekSymmetryCompleteMsg(msg);
             c.destination = null;
-            currentSeekSymmetryCommand = null;
+            currentSymmetryCmd = null;
         }
     }
 
@@ -119,7 +128,28 @@ public class AstronautTask extends Task {
         }
     }
 
-    private void attackEnemyHq() {
+    private void handleDefense() {
+        // attack anyone nearby
+        AstronautInfo[] enemies = uc.senseAstronauts(c.visionRange, c.team.getOpponent());
+        if (enemies.length > 0) {
+            int nearestIdx = Vector2D.getNearest(c.loc, enemies, enemies.length);
+            c.destination = enemies[nearestIdx].getLocation();
+            if (c.loc.distanceSquared(c.destination) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1)) {
+                uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1);
+            }
+        }
+        c.destination = currentDefCmd.target;
+    }
+
+    private boolean attackEnemyHq() {
+
+        if (initialOxygen < 75) {
+            for (CarePackageInfo pax: uc.senseCarePackages(c.actionRange)) {
+                if (pax.getCarePackageType() == CarePackage.OXYGEN_TANK && uc.canPerformAction(ActionType.RETRIEVE, c.loc.directionTo(pax.getLocation()), 1)) {
+                    uc.performAction(ActionType.RETRIEVE, c.loc.directionTo(pax.getLocation()), 1);
+                }
+            }
+        }
 
         // attack anyone nearby
         AstronautInfo[] enemies = uc.senseAstronauts(c.visionRange, c.team.getOpponent());
@@ -129,11 +159,14 @@ public class AstronautTask extends Task {
             if (c.loc.distanceSquared(c.destination) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1)) {
                 uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1);
             }
-            return;
+            return true;
         }
 
         int nearestHqIdx = Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize);
         Location target = rdb.enemyHq[nearestHqIdx];
+        if (Vector2D.manhattanDistance(c.loc, target) > uc.getAstronautInfo().getOxygen()) {
+            return false;
+        }
         c.destination = target;
 
         if (uc.canSenseLocation(target)) {
@@ -143,5 +176,6 @@ public class AstronautTask extends Task {
                 uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(target), 1);
             }
         }
+        return true;
     }
 }

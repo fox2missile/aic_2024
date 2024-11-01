@@ -91,6 +91,10 @@ public class C {
             MapObject.HYPERJUMP,
     };
 
+    public int bitCount(int num) {
+        return Integer.SIZE - Integer.numberOfLeadingZeros(num);
+    }
+
 
     public boolean canMove(Direction dir) {
         return uc.canPerformAction(ActionType.MOVE, dir, 1);

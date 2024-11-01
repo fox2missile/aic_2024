@@ -26,6 +26,10 @@ public class DbConst {
     public final int MSG_SIZE_GET_PACKAGES_CMD = 3;
     // {TARGET UNIT, LOC X, LOC Y}
 
+    // MSG_ID_DEFENSE_CMD
+    public final int MSG_SIZE_DEFENSE_CMD = 3;
+    // {DEFENDER ID, THREAT X, THREAT Y}
+
     public final int MSG_SIZE_ENEMY_HQ = 2;
     // {x, y}
 
@@ -56,5 +60,6 @@ public class DbConst {
     public final int MSG_ID_ENEMY_HQ = MSG_ID_BEGIN - 4;
     public final int MSG_ID_ENEMY_HQ_DESTROYED = MSG_ID_BEGIN - 5;
     public final int MSG_ID_GET_PACKAGES_CMD = MSG_ID_BEGIN - 6;
+    public final int MSG_ID_DEFENSE_CMD = MSG_ID_BEGIN - 7;
 
 }
