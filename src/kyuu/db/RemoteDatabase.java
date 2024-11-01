@@ -583,8 +583,8 @@ public class RemoteDatabase extends Database {
                     AlertMessage msg = new AlertMessage(loc, strength);
                     Location sector = c.getSector(msg.target);
                     dangerSectors.add(sector);
-                    sectorLastDanger.add(sector, uc.getRound());
-                    knownAlertLocations.add(msg.target, uc.getRound());
+                    sectorLastDanger.addReplace(sector, uc.getRound());
+                    knownAlertLocations.addReplace(msg.target, uc.getRound());
                     if (recentDangerSectors.size() >= RECENT_DANGER_SECTOR_MAX) {
                         recentDangerSectors.removeFirst();
                     }
