@@ -361,6 +361,53 @@ public class ParallelSearch {
         }
     }
 
+    public int calculateMinDist(Location target, Direction moveBackDir, int steps) {
+        calculateBestDirection(target, moveBackDir, steps);
+        return bestDirMinStep + 2;
+    }
+
+    public int[] calculateMinDist(Location[] locs, int steps) {
+        Location center = c.loc;
+        originX = center.x - 4;
+        originY = center.y - 4;
+        long[] destinationMask = new long[steps + 1];
+        int[] dist = new int[locs.length];
+        int targetSumX = 0;
+        int targetSumY = 0;
+        int targetCount = 0;
+
+        for (int i = 0; i < locs.length; i++) {
+            Location localLoc = locs[i].add(-originX, -originY);
+            if (localLoc.x < 0 || localLoc.x > 7 || localLoc.y < 0 || localLoc.y > 7) {
+                dist[i] = Integer.MAX_VALUE;
+                continue;
+            }
+            targetSumX += locs[i].x;
+            targetSumY += locs[i].y;
+            targetCount++;
+            destinationMask[0] |= (1L << getMatrixIdx(localLoc.x, localLoc.y));
+        }
+        if (destinationMask[0] == 0) {
+            return null;
+        }
+        Location targetAvg = new Location(targetSumX / targetCount, targetSumY / targetCount);
+        calculateBestDirection(destinationMask, center.directionTo(targetAvg), null, steps, false);
+        for (int i = 0; i < locs.length; i++) {
+            boolean found = false;
+            Location localLoc = locs[i].add(-originX, -originY);
+            for (int j = 1; j < reachable.length; j++) {
+                if (isReachable(IMMEDIATE_CENTER, j)) {
+                    dist[i] = j;
+                    found = true;
+                }
+            }
+            if (!found) {
+                dist[i] = Integer.MAX_VALUE;
+            }
+        }
+        return dist;
+    }
+
     public Direction calculateBestDirection(Location target, Direction moveBackDir, int steps) {
         Location center = c.loc;
         originX = center.x - 4;

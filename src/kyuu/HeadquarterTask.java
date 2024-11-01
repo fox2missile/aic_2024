@@ -7,6 +7,7 @@ import kyuu.message.EnemyHqMessage;
 import kyuu.message.Message;
 import kyuu.message.SeekSymmetryCommand;
 import kyuu.message.SeekSymmetryComplete;
+import kyuu.pathfinder.ParallelSearch;
 import kyuu.tasks.Task;
 
 public class HeadquarterTask extends Task {
@@ -23,15 +24,20 @@ public class HeadquarterTask extends Task {
     boolean[] symmetryAssigned;
 
     FastLocSet wantedPackages;
+    FastLocSet unreachableLocs;
 
     boolean enemyHqBroadcasted;
+
+    ParallelSearch packageSearch;
 
     HeadquarterTask(C c) {
         super(c);
         rdb.subscribeSeekSymmetryComplete = true;
         rdb.subscribeEnemyHq = true;
         rdb.subscribeSeekSymmetryCommand = true;
+        packageSearch = ParallelSearch.getDefaultSearch(c);
         wantedPackages = new FastLocSet();
+        unreachableLocs = new FastLocSet();
     }
 
 
@@ -67,17 +73,17 @@ public class HeadquarterTask extends Task {
             if (rdb.enemyHqSize == 0) {
                 while (enlistSymmetrySeeker()) {}
             } else {
-                getPackages();
+                broadcastEnemyHq();
+                while (getPackages()) {}
                 enlistAttackers();
             }
 
 
-            broadcastEnemyHq();
         }
 //        EnlistTask.run(c);
     }
 
-    private void getPackages() {
+    private boolean getPackages() {
         uc.senseCarePackages(c.visionRange);
         int bestScore = Integer.MIN_VALUE;
         CarePackageInfo bestPax = null;
@@ -85,6 +91,10 @@ public class HeadquarterTask extends Task {
         for (CarePackageInfo pax: uc.senseCarePackages(c.visionRange)) {
             currentPaxes.add(pax.getLocation());
             if (wantedPackages.contains(pax.getLocation())) {
+                continue;
+            }
+            if (unreachableLocs.contains(pax.getLocation()) || !c.s.isReachableDirectly(pax.getLocation())) {
+                unreachableLocs.add(pax.getLocation());
                 continue;
             }
             int dist = Vector2D.manhattanDistance(c.loc, pax.getLocation());
@@ -111,15 +121,21 @@ public class HeadquarterTask extends Task {
             if (retrieveCost < 11) {
                 retrieveCost = 11;
             }
-            for (Direction dir: c.getFirstDirs(c.loc.directionTo(bestPax.getLocation()))) {
+            Direction dirTarget = c.loc.directionTo(bestPax.getLocation());
+            if (dirTarget == Direction.ZERO) {
+                dirTarget = Direction.NORTH;
+            }
+            for (Direction dir: c.getFirstDirs(dirTarget)) {
                 if (uc.canEnlistAstronaut(dir, retrieveCost, null)) {
                     uc.enlistAstronaut(dir, retrieveCost, null);
                     rdb.sendGetPackagesCommand(uc.senseAstronaut(c.loc.add(dir)).getID(), bestPax.getLocation());
                     wantedPackages.add(bestPax.getLocation());
-                    return;
+                    uc.drawLineDebug(c.loc, bestPax.getLocation(), 0, 255, 0);
+                    return true;
                 }
             }
         }
+        return false;
     }
 
     private static int getPaxScore(CarePackageInfo pax, int dist) {
@@ -149,6 +165,9 @@ public class HeadquarterTask extends Task {
         int nearestEnemyHqIdx = Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize);
         Location targetHq = rdb.enemyHq[nearestEnemyHqIdx];
         int atkCost = Vector2D.manhattanDistance(c.loc, targetHq) * 3 / 2;
+        if (atkCost < 11) {
+            atkCost = 11;
+        }
         c.logger.log("enlisting attackers with cost %d", atkCost);
         for (Direction dir: c.getFirstDirs(c.loc.directionTo(targetHq))) {
             if (c.uc.canEnlistAstronaut(dir, atkCost, null)) {
@@ -326,6 +345,7 @@ public class HeadquarterTask extends Task {
         }
 
         for (int i = 0; i < rdb.enemyHqSize; i++) {
+            uc.drawLineDebug(c.loc, rdb.enemyHq[i], 255, 0, 0);
             rdb.sendEnemyHqLocMessage(rdb.enemyHq[i]);
         }
     }

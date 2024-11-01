@@ -19,6 +19,7 @@ public class C {
     public int seed;
 
     public float visionRange;
+    public int visionRangeStep;
     public float actionRange;
     public Location loc;
     public int id;
@@ -151,6 +152,7 @@ public class C {
         s = new Scanner(this);
 
         visionRange = uc.isStructure() ? (uc.getType() == StructureType.HQ ? 64 : 49) : 25;
+        visionRangeStep = (int)Math.sqrt(visionRange);
         actionRange = 2;
 
         for (int i = 0; i < directionsNorthCcw.length; i++) {
