@@ -30,6 +30,8 @@ public class Scanner {
 
     int totalSavedOxygen;
     public int defaultAvailableEnlistSlot;
+    public boolean allyHqNearby;
+    public Location nearestEnemyStructure;
 
     public Scanner(C c) {
         this.c = c;
@@ -139,6 +141,23 @@ public class Scanner {
             immediateBlockers++;
         }
         prevLoc = c.loc;
+
+        allyHqNearby = false;
+        for (StructureInfo s: uc.senseStructures(c.visionRange, c.team)) {
+            if (s.getType() == StructureType.HQ) {
+                allyHqNearby = true;
+            }
+        }
+
+        nearestEnemyStructure = null;
+        int nearestDist = Integer.MAX_VALUE;
+        for (StructureInfo s: uc.senseStructures(c.visionRange, c.opponent)) {
+            int dist = c.loc.distanceSquared(s.getLocation());
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearestEnemyStructure = s.getLocation();
+            }
+        }
     }
 
     public boolean isAllyVisible(int id) {
@@ -193,5 +212,43 @@ public class Scanner {
         }
         unreachableLocs.add(target);
         return false;
+    }
+
+    public int getEnemyAstronautValue(AstronautInfo enemy) {
+        int value = (int) Math.ceil(enemy.getOxygen());
+        CarePackage pax = enemy.getCarePackage();
+        if (pax == CarePackage.REINFORCED_SUIT) {
+            value = (value * 2 * value);
+        } else if (pax == CarePackage.SURVIVAL_KIT) {
+            value *= 2;
+        } else if (pax == CarePackage.SETTLEMENT) {
+            value += 9999999;
+        }
+
+        // attack anyone nearest
+        if (allyHqNearby) {
+            value += 1000000 / c.loc.distanceSquared(enemy.getLocation());
+        }
+
+        // if can move but the enemy is still under construction, skip if we can slip through
+        if (uc.getAstronautInfo().getCurrentMovementCooldown() >= 1.0 && enemy.isBeingConstructed() && nearestEnemyStructure != null) {
+            value = 1;
+            // todo: refactor move this code
+            for (Direction dir: c.allDirs) {
+                if (!c.canMove(dir)) {
+                    continue;
+                }
+                Location check = c.loc.add(dir);
+                if (check.distanceSquared(nearestEnemyStructure) <= c.actionRange) {
+                    c.move(dir);
+                    Direction structureDir = check.directionTo(nearestEnemyStructure);
+                    while (uc.canPerformAction(ActionType.SABOTAGE, structureDir, 1)) {
+                        uc.performAction(ActionType.SABOTAGE, structureDir, 1);
+                    }
+                }
+            }
+        }
+
+        return value;
     }
 }

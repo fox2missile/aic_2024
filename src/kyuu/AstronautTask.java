@@ -414,20 +414,27 @@ public class AstronautTask extends Task {
 
         // attack anyone nearby
         AstronautInfo[] enemies = uc.senseAstronauts(c.visionRange, c.team.getOpponent());
+        int selfValue = (int)uc.getAstronautInfo().getOxygen();
+        if (uc.getAstronautInfo().getCarePackage() == CarePackage.SURVIVAL_KIT) {
+            selfValue *= 2;
+        }
         if (enemies.length > 0) {
             int attackIdx = -1;
             int highestValue = 0;
+            int nearestDist = Integer.MAX_VALUE;
             for (int i = 0; i < enemies.length; i++) {
-                int value = (int) Math.ceil(enemies[i].getOxygen());
-                CarePackage pax = enemies[i].getCarePackage();
-                if (pax == CarePackage.REINFORCED_SUIT) {
-                    value *= value;
-                } else if (pax != null) {
-                    value += 10;
-                } // todo: value should be zero if not reinforced and still under construction
-                if (value > highestValue) {
-                    attackIdx = i;
-                    highestValue = value;
+                if (Vector2D.chebysevDistance(c.loc, enemies[i].getLocation()) > c.remainingSteps()) {
+                    continue;
+                }
+                int value = c.s.getEnemyAstronautValue(enemies[i]);
+                // suppressors only attack if they have higher value
+                if (value >= selfValue && value >= highestValue) {
+                    int dist = c.loc.distanceSquared(enemies[i].getLocation());
+                    if (value > highestValue || dist < nearestDist) {
+                        attackIdx = i;
+                        highestValue = value;
+                        nearestDist = c.loc.distanceSquared(enemies[i].getLocation());
+                    }
                 }
             }
             if (attackIdx != -1) {
@@ -490,4 +497,6 @@ public class AstronautTask extends Task {
         }
 
     }
+
+
 }

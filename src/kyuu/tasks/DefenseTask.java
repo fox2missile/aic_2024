@@ -2,6 +2,7 @@ package kyuu.tasks;
 
 import aic2024.user.ActionType;
 import aic2024.user.AstronautInfo;
+import aic2024.user.CarePackage;
 import aic2024.user.Location;
 import kyuu.C;
 import kyuu.Vector2D;
@@ -33,11 +34,29 @@ public class DefenseTask extends Task {
         // attack anyone nearby
         AstronautInfo[] enemies = uc.senseAstronauts(c.visionRange, c.team.getOpponent());
         if (enemies.length > 0) {
-            int nearestIdx = Vector2D.getNearest(c.loc, enemies, enemies.length);
-            c.destination = enemies[nearestIdx].getLocation();
-            while (c.loc.distanceSquared(c.destination) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1)) {
-                uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1);
+
+            int attackIdx = -1;
+            int highestValue = 0;
+            for (int i = 0; i < enemies.length; i++) {
+                if (Vector2D.chebysevDistance(c.loc, enemies[i].getLocation()) > c.remainingSteps()) {
+                    continue;
+                }
+                int value = c.s.getEnemyAstronautValue(enemies[i]);
+                // defenders always attack highest value
+                if (value > highestValue) {
+                    attackIdx = i;
+                    highestValue = value;
+                }
             }
+            if (attackIdx != -1) {
+                c.destination = enemies[attackIdx].getLocation();
+                while (c.loc.distanceSquared(c.destination) <= c.actionRange && uc.canPerformAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1)) {
+                    uc.performAction(ActionType.SABOTAGE, c.loc.directionTo(c.destination), 1);
+                }
+            } else {
+                c.destination = cmd.target;
+            }
+
         } else {
             c.destination = cmd.target;
         }
