@@ -135,30 +135,6 @@ public class C {
     }
 
     C(UnitController unitController) {
-        uc = unitController;
-        id = uc.getID();
-        team = uc.getTeam();
-        opponent = uc.getOpponent();
-        dc = new DbConst();
-        ldb = new LocalDatabase(this);
-        rdb = new RemoteDatabase(this);
-        if (DEBUG) {
-            logger = new LoggerStandard(uc);
-        } else {
-            logger = new LoggerDummy();
-        }
-
-        mapWidth = uc.getMapWidth();
-        mapHeight = uc.getMapHeight();
-
-        seed = (int)(uc.getRandomDouble() * 100);
-        loc = uc.getLocation();
-        s = new Scanner(this);
-
-        visionRange = uc.isStructure() ? (uc.getType() == StructureType.HQ ? 64 : 49) : 25;
-        visionRangeStep = (int)Math.sqrt(visionRange);
-        actionRange = 2;
-
         for (int i = 0; i < directionsNorthCcw.length; i++) {
             Direction first = directionsNorthCcw[i];
             allFirstDirs[i][0] = first;
@@ -180,10 +156,10 @@ public class C {
                     Direction.NORTHWEST, Direction.NORTHEAST, Direction.SOUTHEAST, Direction.SOUTHWEST};
             this.diagonalDirsZero = new Direction[]{
                     Direction.ZERO, Direction.NORTHWEST, Direction.NORTHEAST, Direction.SOUTHEAST, Direction.SOUTHWEST};
-            this.allDirs = new Direction[]{
+            this.allDirsZero = new Direction[]{
                     Direction.ZERO, Direction.WEST, Direction.NORTHWEST, Direction.NORTH, Direction.NORTHEAST,
                     Direction.EAST, Direction.SOUTHEAST, Direction.SOUTH, Direction.SOUTHWEST};
-            this.allDirsZero = new Direction[]{
+            this.allDirs = new Direction[]{
                     Direction.WEST, Direction.NORTHWEST, Direction.NORTH, Direction.NORTHEAST,
                     Direction.EAST, Direction.SOUTHEAST, Direction.SOUTH, Direction.SOUTHWEST};
         } else if (id % 4 == 1) {
@@ -232,6 +208,33 @@ public class C {
                     Direction.ZERO, Direction.SOUTH, Direction.SOUTHEAST, Direction.EAST, Direction.NORTHEAST,
                     Direction.NORTH, Direction.NORTHWEST, Direction.WEST, Direction.SOUTHWEST};
         }
+
+
+        uc = unitController;
+        id = uc.getID();
+        team = uc.getTeam();
+        opponent = uc.getOpponent();
+        dc = new DbConst();
+        ldb = new LocalDatabase(this);
+        rdb = new RemoteDatabase(this);
+        if (DEBUG) {
+            logger = new LoggerStandard(uc);
+        } else {
+            logger = new LoggerDummy();
+        }
+
+        mapWidth = uc.getMapWidth();
+        mapHeight = uc.getMapHeight();
+
+        seed = (int)(uc.getRandomDouble() * 100);
+        loc = uc.getLocation();
+        s = new Scanner(this);
+
+        visionRange = uc.isStructure() ? (uc.getType() == StructureType.HQ ? 64 : 49) : 25;
+        visionRangeStep = (int)Math.sqrt(visionRange);
+        actionRange = 2;
+
+
     }
 
     public Direction[] getFirstDirs(Direction first) {

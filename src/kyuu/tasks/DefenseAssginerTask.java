@@ -64,8 +64,9 @@ public class DefenseAssginerTask extends Task {
                         int enlistId = uc.senseAstronaut(c.loc.add(dir)).getID();
                         rdb.sendDefenseCommand(enlistId, a.getLocation());
                         if (!attackerDefenderMap.contains(a.getID())) {
-                            attackerDefenderMap.add(a.getID(),enlistId);
+                            attackerDefenderMap.add(a.getID(), enlistId);
                         }
+                        ldb.pushAssignedThisRound(enlistId);
                         uc.drawLineDebug(c.loc.add(dir), a.getLocation(), 0, 0, 255);
                         enemyStrength--;
                     }

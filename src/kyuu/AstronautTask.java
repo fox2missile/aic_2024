@@ -2,10 +2,7 @@ package kyuu;
 
 import aic2024.user.*;
 import kyuu.message.*;
-import kyuu.tasks.MoveTask;
-import kyuu.tasks.RetrievePackageTask;
-import kyuu.tasks.ScanSectorTask;
-import kyuu.tasks.Task;
+import kyuu.tasks.*;
 
 public class AstronautTask extends Task {
 
@@ -19,6 +16,8 @@ public class AstronautTask extends Task {
     SeekSymmetryCommand currentSymmetryCmd;
     RetrievePackageCommand currentRetPaxCmd;
     DefenseCommand currentDefCmd;
+    Task currentSurveyTask;
+    Task currentExpansionWorkerTask;
 
     private final int initialOxygen;
 
@@ -27,10 +26,12 @@ public class AstronautTask extends Task {
 //        pathFinder = new NaivePathFinder(c);
         moveTask = new MoveTask(c);
         scanSectorTask = new ScanSectorTask(c);
-        retrievePaxTask = new RetrievePackageTask(c);
+        retrievePaxTask = new RetrievePackageTask(c, c.visionRange);
         rdb.subscribeSeekSymmetryCommand = true;
         rdb.subscribeEnemyHq = true;
         rdb.subscribePackageRetrievalCommand = true;
+        rdb.subscribeSurveyCommand = true;
+        rdb.subscribeExpansionCommand = true;
         initialOxygen = (int)Math.floor(uc.getAstronautInfo().getOxygen());
         c.logger.log("Spawn");
     }
@@ -51,6 +52,10 @@ public class AstronautTask extends Task {
                 currentRetPaxCmd = (RetrievePackageCommand) msg;
             } else if (msg instanceof DefenseCommand) {
                 currentDefCmd = (DefenseCommand) msg;
+            } else if (msg instanceof SurveyCommand) {
+                currentSurveyTask = new SurveyTask(c, (SurveyCommand) msg);
+            } else if (msg instanceof ExpansionCommand) {
+                currentExpansionWorkerTask = new ExpansionWorkerTask(c, ((ExpansionCommand) msg), retrievePaxTask);
             }
             msg = rdb.retrieveNextMessage();
         }
@@ -63,8 +68,18 @@ public class AstronautTask extends Task {
         } else if (currentSymmetryCmd != null) {
             handleSymmetrySeekCmd();
         } else if (currentRetPaxCmd != null) {
-            handleRetrievePax();
-        }else if (rdb.enemyHqSize > 0) {
+            if (!handleRetrievePax()) {
+                if (currentExpansionWorkerTask != null) {
+                    currentExpansionWorkerTask.run();
+                } else {
+                    handleFreeRoam();
+                }
+            }
+        }  else if (currentSurveyTask != null) {
+            currentSurveyTask.run();
+        }   else if (currentExpansionWorkerTask != null) {
+            currentExpansionWorkerTask.run();
+        } else if (rdb.enemyHqSize > 0) {
             if (!attackEnemyHq()) {
                 handleFreeRoam();
             }
@@ -119,13 +134,19 @@ public class AstronautTask extends Task {
         }
     }
 
-    private void handleRetrievePax() {
+
+    private boolean handleRetrievePax() {
+        if (uc.canSenseLocation(currentRetPaxCmd.target) && uc.senseCarePackage(currentRetPaxCmd.target) == null) {
+            currentRetPaxCmd = null;
+            return false;
+        }
         if (c.loc.distanceSquared(currentRetPaxCmd.target) <= c.actionRange && uc.canPerformAction(ActionType.RETRIEVE, c.loc.directionTo(currentRetPaxCmd.target), 1)) {
             uc.performAction(ActionType.RETRIEVE, c.loc.directionTo(currentRetPaxCmd.target), 1);
             currentRetPaxCmd = null;
         } else {
             c.destination = currentRetPaxCmd.target;
         }
+        return true;
     }
 
     private void handleDefense() {
