@@ -102,9 +102,9 @@ public class SettlementStrategyTask extends Task {
                 if (rdb.surveyorStates[ex.id][i] == dc.SURVEY_EXCELLENT) {
                     score += 100;
                 }
-                score -= (rdb.countNearbyRecentDangerSectors(rdb.expansionSites[ex.id][i], 350) * 75);
+                score -= (rdb.countNearbyRecentDangerSectors(rdb.expansionSites[ex.id][i], 350, 8) * 75);
                 if (ex.depth == 1) {
-                    score -= (rdb.countNearbyRecentDangerSectors(ex.expansionLoc, 350) * 75);
+                    score -= (rdb.countNearbyRecentDangerSectors(ex.expansionLoc, 350, 8) * 75);
                 }
 
                 if (nearestEnemyHq != null) {

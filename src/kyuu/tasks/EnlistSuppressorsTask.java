@@ -16,20 +16,26 @@ public class EnlistSuppressorsTask extends Task {
     int cooldown;
     int cooldownMultiplier;
 
-    Deque<Integer> suppressorRounds;
-
-    final int TARGET_SUPPRESSORS_COUNT = 15;
+    int minSuppressors;
 
     int currentDice;
 
+    final int DEFAULT_COOLDOWN = 10;
+
     public EnlistSuppressorsTask(C c) {
         super(c);
-        cooldown = 10;
+        cooldown = DEFAULT_COOLDOWN;
         suppressors = new FastIntIntMap();
         cooldownMultiplier = 1;
-        // want to at least keep minimum number of suppressors at all times
-        suppressorRounds = new ArrayDeque<>(TARGET_SUPPRESSORS_COUNT);
+        minSuppressors = c.s.defaultAvailableEnlistSlot;
         currentDice = 0;
+
+        rdb.suppressorHeartbeatReceiver = (int suppressorId) -> {
+              if (suppressors.contains(suppressorId)) {
+                  minSuppressors--;
+                  c.logger.log("Min suppressors: %d", minSuppressors);
+              }
+        };
     }
 
     private int estimateMapMagnitude() {
@@ -122,14 +128,28 @@ public class EnlistSuppressorsTask extends Task {
 
     @Override
     public void run() {
-        if (rdb.enemyHqSize == 0) {
+
+        if (uc.getRound() % (cooldown * 2) == 0) {
+            minSuppressors = Math.min(minSuppressors + 1, c.s.defaultAvailableEnlistSlot);
+            c.logger.log("Min suppressors: %d", minSuppressors);
+        }
+
+        if (rdb.countNearbyRecentDangerSectors(c.getSector(c.loc), 200, 12) > 0) {
+            minSuppressors = c.s.defaultAvailableEnlistSlot;
+        }
+
+        if (rdb.enemyHqSize == 0 || minSuppressors < 0) {
             return;
         }
 
-        if (uc.senseAstronauts(c.visionRange, c.opponent).length == 0) {
+        if (uc.senseAstronauts(c.visionRange, c.opponent).length > 0) {
+            minSuppressors = c.s.defaultAvailableEnlistSlot;
+            cooldown = DEFAULT_COOLDOWN;
+        } else {
             for (AstronautInfo ally: uc.senseAstronauts(c.visionRange, c.team)) {
                 if (ally.getOxygen() < 2 && suppressors.contains(ally.getID())) {
                     cooldown *= 2;
+                    minSuppressors -= 2;
                     return;
                 }
             }
@@ -166,15 +186,17 @@ public class EnlistSuppressorsTask extends Task {
             check = check.add(enemyDir.dx * 3, enemyDir.dy * 3);
         }
 
-        int givenOxygen = Math.max(stepDist, 10);
+        int givenOxygen = Math.max((stepDist * 2) / 3, 10);
 
+        int enlistedCount = 0;
         for (Direction dir: Direction.values()) {
             if (c.uc.canEnlistAstronaut(dir, givenOxygen, null)) {
                 c.enlistAstronaut(dir, givenOxygen, null);
                 int enlistId = uc.senseAstronaut(c.loc.add(dir)).getID();
                 suppressors.add(enlistId, 1);
                 rdb.sendSuppressionCommand(enlistId, enemyHq);
-                if (ldb.enlistFullyReserved()) {
+                enlistedCount++;
+                if (ldb.enlistFullyReserved() || enlistedCount >= minSuppressors) {
                     return;
                 }
             }

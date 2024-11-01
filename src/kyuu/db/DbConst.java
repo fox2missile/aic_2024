@@ -157,4 +157,6 @@ public class DbConst {
     public final int MSG_ID_BASE_HEARTBEAT = MSG_ID_BEGIN - 25;
     public final int MSG_ID_NEW_SETTLEMENT = MSG_ID_BEGIN - 26;
     public final int MSG_ID_GET_PACKAGES_FAILED = MSG_ID_BEGIN - 27;
+    public final int MSG_ID_SUPPRESSOR_HEARTBEAT = MSG_ID_BEGIN - 28;
+
 }
