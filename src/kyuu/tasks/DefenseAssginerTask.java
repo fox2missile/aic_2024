@@ -45,7 +45,7 @@ public class DefenseAssginerTask extends Task {
                     // todo: optimize 2^N
                     int givenOxygen = Math.min(enemyOxygen + 10, (int)Math.floor(uc.getStructureInfo().getOxygen()));
                     if (uc.canEnlistAstronaut(dir, givenOxygen, CarePackage.REINFORCED_SUIT)) {
-                        uc.enlistAstronaut(dir, givenOxygen, null);
+                        uc.enlistAstronaut(dir, givenOxygen, CarePackage.REINFORCED_SUIT);
                         int enlistId = uc.senseAstronaut(c.loc.add(dir)).getID();
                         rdb.sendDefenseCommand(enlistId, a.getLocation());
                         if (!attackerDefenderMap.contains(a.getID())) {
