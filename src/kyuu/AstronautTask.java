@@ -71,6 +71,9 @@ public class AstronautTask extends Task {
             msg = rdb.retrieveNextMessage();
         }
         uc.cleanBroadcastBuffer();
+        if (uc.getAstronautInfo().isBeingConstructed()) {
+            return;
+        }
 
         seekUnknownEnemyHq();
 
