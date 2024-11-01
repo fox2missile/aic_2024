@@ -54,11 +54,9 @@ public class JumpStrategyTask extends Task {
     @Override
     public void run() {
         int currentBuildId = nextBuild;
+        ldb.neededHyperJumps = 0;
         for (int i = 0; i < needJumpsLength; i++) {
             int k = (i + currentBuildId) % needJumpsLength;
-            if (ldb.enlistFullyReserved() || uc.getStructureInfo().getCarePackagesOfType(CarePackage.HYPERJUMP) == 0) {
-                return;
-            }
             if (uc.senseObjectAtLocation(needJumps[k]) == MapObject.HYPERJUMP) {
                 builders.remove(needJumps[k]);
                 continue;
@@ -66,13 +64,24 @@ public class JumpStrategyTask extends Task {
             if (builders.contains(needJumps[k]) && c.s.isAllyVisible(builders.getVal(needJumps[k]))) {
                 continue;
             }
+            ldb.neededHyperJumps++;
+            if (uc.getStructureInfo().getCarePackagesOfType(CarePackage.HYPERJUMP) == 0) {
+                return;
+            }
+
+            if (ldb.enlistFullyReserved()) {
+                ldb.neededHyperJumps--;
+                return;
+            }
+
             // first builder or previous builder failed
             for (Direction dir: c.getFirstDirs(c.loc.directionTo(needJumps[k]))) {
                 if (uc.canEnlistAstronaut(dir, 10, CarePackage.HYPERJUMP)) {
-                    uc.enlistAstronaut(dir, 10, CarePackage.HYPERJUMP);
+                    c.enlistAstronaut(dir, 10, CarePackage.HYPERJUMP);
                     int enlistId = uc.senseAstronaut(c.loc.add(dir)).getID();
                     rdb.sendBuildHyperJumpCommand(enlistId, needJumps[k]);
                     nextBuild = (k + 1) % needJumpsLength;
+                    ldb.neededHyperJumps--;
                     break;
                 }
             }
@@ -85,7 +94,7 @@ public class JumpStrategyTask extends Task {
                 return;
             }
             if (uc.canEnlistAstronaut(dir, 10, CarePackage.HYPERJUMP)) {
-                uc.enlistAstronaut(dir, 10, CarePackage.HYPERJUMP);
+                c.enlistAstronaut(dir, 10, CarePackage.HYPERJUMP);
                 int enlistId = uc.senseAstronaut(c.loc.add(dir)).getID();
                 rdb.sendBuildHyperJumpCommand(enlistId, c.loc.add(dir));
             }

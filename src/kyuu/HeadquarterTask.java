@@ -31,9 +31,6 @@ public class HeadquarterTask extends Task {
         rdb.subscribeEnemyHq = true;
         rdb.subscribeSurveyComplete = true;
         rdb.subscribeExpansionEstablished = true;
-        rdb.subscribeDomeBuilt = true;
-        rdb.subscribeDomeDestroyed = true;
-        rdb.subscribeExpansionMissedMsg = true;
         rdb.initExpansionData();
         packageSearch = ParallelSearch.getDefaultSearch(c);
         packageAssignerTask = new PackageAssignerTask(c);
@@ -108,7 +105,7 @@ public class HeadquarterTask extends Task {
         for (int i = 0; i < firstDirs.length && enlistCount < 3; i++) {
             Direction dir = firstDirs[i];
             if (uc.canEnlistAstronaut(dir, 30, null)) {
-                uc.enlistAstronaut(dir, 30, null);
+                c.enlistAstronaut(dir, 30, null);
                 enlistCount++;
             }
         }

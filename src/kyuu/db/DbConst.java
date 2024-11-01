@@ -1,5 +1,6 @@
 package kyuu.db;
 
+import aic2024.user.CarePackage;
 import aic2024.user.GameConstants;
 import aic2024.user.Location;
 
@@ -45,11 +46,11 @@ public class DbConst {
 
     // MSG_ID_SURVEY_CMD
     public final int MSG_SIZE_SURVEY_CMD = 11;
-    // {SURVEYOR ID, x, y, expansion id, src size (loc), src1.x, src1.y, src2.x, src2.y, src3.x, src3.y}
+    // {SURVEYOR ID, x, y, expansion id, path size (loc), path1.x, path1.y, path2.x, path2.y, path3.x, path3.y}
 
     // MSG_ID_EXPANSION
     public final int MSG_SIZE_EXPANSION = 14;
-    // {worker id, x, y, state, expansion id, next.x, next.y, src size (loc), src1.x, src1.y, src2.x, src2.y, src3.x, src3.y}
+    // {worker id, x, y, state, expansion id, next.x, next.y, path size (loc), path1.x, path1.y, path2.x, path2.y, path3.x, path3.y}
     public final int EXPANSION_STATE_INIT = 0;
     public final int EXPANSION_STATE_ESTABLISHED = 1;
     public final int EXPANSION_STATE_BUILDING_DOME = 2;
@@ -59,8 +60,8 @@ public class DbConst {
     // {x, y}
 
     // MSG_ID_BUILD_DOME_CMD
-    public final int MSG_SIZE_BUILD_DOME_CMD = 3;
-    // {builder id, x, y}
+    public final int MSG_SIZE_BUILD_DOME_CMD = 11;
+    // {builder id, x, y, expansion id, path size (loc), path1.x, path1.y, path2.x, path2.y, path3.x, path3.y }
 
 
     // MSG_ID_BUILD_HYPER_JUMP_CMD
@@ -72,6 +73,8 @@ public class DbConst {
 
     public final int MSG_SIZE_SUPPRESSION_CMD = 3;
     // {suppressor id, x, y}
+
+    public final int MSG_SIZE_PACKAGE_PRIORITY_MAP = CarePackage.values().length;
 
 
     // MSG_ID_SYMMETRIC_SEEKER_COMPLETE
@@ -92,6 +95,7 @@ public class DbConst {
     public final int EXPANSION_ESTABLISHED_EXPANSION_ID_MASKER = 0x000000FF;
     public final int EXPANSION_MISSED_EXPANSION_ID_MASKER = 0x000000FF;
     public final int ALERT_STRENGTH_MASKER = 0x000000FF;
+    public final int DOME_DESTROYED_EXPANSION_ID_MASKER = 0x000000FF;
 
 
     public final int MSG_ID_MASK_SYMMETRIC_SEEKER_COMPLETE = 0x01000000;
@@ -138,4 +142,5 @@ public class DbConst {
     public final int MSG_ID_BUILD_HYPER_JUMP_CMD = MSG_ID_BEGIN - 21;
     public final int MSG_ID_SUPPRESSION_CMD = MSG_ID_BEGIN - 22;
 
+    public final int MSG_ID_PACKAGE_PRIORITY_MAP = MSG_ID_BEGIN - 23;
 }

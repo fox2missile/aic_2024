@@ -3,6 +3,7 @@ package kyuu.tasks;
 import aic2024.user.*;
 import kyuu.C;
 import kyuu.Vector2D;
+import kyuu.message.PackagePriorityNotice;
 
 public class RetrievePackageTask extends Task {
 
@@ -26,16 +27,30 @@ public class RetrievePackageTask extends Task {
 
     float visionRange;
 
+    boolean isDefault;
+
+    PackagePriorityNotice currentBoost;
+
     public RetrievePackageTask(C c, int[] scoreMap, float visionRange) {
         super(c);
         target = null;
         if (scoreMap == null) {
+            this.isDefault = true;
             this.scoreMap = defaultScores;
         } else {
             this.scoreMap = scoreMap;
+            this.isDefault = false;
         }
         prevRound = -1;
         this.visionRange = visionRange;
+        this.currentBoost = new PackagePriorityNotice(new int[dc.MSG_SIZE_PACKAGE_PRIORITY_MAP]);
+        if (this.isDefault && rdb.packagePriorityNoticeReceiver == null) {
+            rdb.packagePriorityNoticeReceiver = (int __) -> {
+                for (int i = 0; i < dc.MSG_SIZE_PACKAGE_PRIORITY_MAP; i++) {
+                    currentBoost.priorityBoostMap[i] = uc.pollBroadcast().getMessage();
+                }
+            };
+        }
     }
 
     public RetrievePackageTask(C c) {
@@ -81,14 +96,14 @@ public class RetrievePackageTask extends Task {
         int bestScore = Integer.MIN_VALUE;
         CarePackageInfo bestPax = null;
         for (CarePackageInfo pax: uc.senseCarePackages(visionRange)) {
-            if (scoreMap[pax.getCarePackageType().ordinal()] < 0) {
-                continue;
-            }
             int dist = Vector2D.chebysevDistance(c.loc, pax.getLocation());
             if (dist > c.remainingSteps()) {
                 continue;
             }
             int score = getScore(pax, dist);
+            if (score < 0) {
+                continue;
+            }
             if (score > bestScore) {
                 bestPax = pax;
                 bestScore = score;
@@ -112,6 +127,7 @@ public class RetrievePackageTask extends Task {
         } else {
             score += scoreMap[carePackageType.ordinal()];
         }
+//        score += currentBoost.priorityBoostMap[carePackageType.ordinal()];
         return score;
     }
 

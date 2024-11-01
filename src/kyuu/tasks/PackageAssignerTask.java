@@ -21,6 +21,21 @@ public class PackageAssignerTask extends Task {
     @Override
     public void run() {
         while (!ldb.enlistFullyReserved() && getPackages()) {}
+
+        adjustPriority();
+    }
+
+    private void adjustPriority() {
+        int[] prio = new int[CarePackage.values().length];
+        if (uc.getStructureInfo().getCarePackagesOfType(CarePackage.RADIO) > 5) {
+            prio[CarePackage.RADIO.ordinal()] -= 1000;
+        }
+        if (uc.getStructureInfo().getCarePackagesOfType(CarePackage.REINFORCED_SUIT) > 30) {
+            prio[CarePackage.REINFORCED_SUIT.ordinal()] -= 100;
+            prio[CarePackage.OXYGEN_TANK.ordinal()] += 100;
+        }
+        prio[CarePackage.HYPERJUMP.ordinal()] += (10 * (ldb.neededHyperJumps - uc.getStructureInfo().getCarePackagesOfType(CarePackage.HYPERJUMP)));
+        rdb.sendPackagePriorityNotice(prio);
     }
 
     private boolean getPackages() {
