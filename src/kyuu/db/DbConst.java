@@ -54,8 +54,9 @@ public class DbConst {
 
     // MSG_ID_SURVEY_COMPLETE
     public final int SURVEY_NONE = 0;
-    public final int SURVEY_GOOD = 1;
-    public final int SURVEY_BAD = 2;
+    public final int SURVEY_BAD = 1;
+    public final int SURVEY_GOOD = 2;
+    public final int SURVEY_EXCELLENT = 3;
     public final int SURVEY_COMPLETE_EXPANSION_ID_MASKER = 0x000000FF;
     public final int EXPANSION_ESTABLISHED_EXPANSION_ID_MASKER = 0x000000FF;
     public final int ALERT_STRENGTH_MASKER = 0x000000FF;
@@ -66,8 +67,9 @@ public class DbConst {
     public final int MSG_ID_MASK_SURVEY_COMPLETE_GOOD = 0x03000000;
     public final int MSG_ID_MASK_SURVEY_COMPLETE_BAD = 0x04000000;
     public final int MSG_ID_MASK_SURVEY_FAILED = 0x05000000;
-    public final int MSG_ID_MASK_EXPANSION_ESTABLISHED = 0x06000000;
-    public final int MSG_ID_MASK_ALERT = 0x07000000;
+    public final int MSG_ID_MASK_SURVEY_COMPLETE_EXCELLENT = 0x06000000;
+    public final int MSG_ID_MASK_EXPANSION_ESTABLISHED = 0x07000000;
+    public final int MSG_ID_MASK_ALERT = 0x08000000;
 
     // common maskers
     public final int MASKER_LOC_X = 0x00FF0000;
@@ -88,9 +90,10 @@ public class DbConst {
     public final int MSG_ID_SURVEY_CMD = MSG_ID_BEGIN - 8;
     public final int MSG_ID_SURVEY_COMPLETE_GOOD = MSG_ID_BEGIN - 9;
     public final int MSG_ID_SURVEY_COMPLETE_BAD = MSG_ID_BEGIN - 10;
-    public final int MSG_ID_SURVEY_FAILED = MSG_ID_BEGIN - 11;
-    public final int MSG_ID_EXPANSION = MSG_ID_BEGIN - 12;
-    public final int MSG_ID_EXPANSION_ESTABLISHED = MSG_ID_BEGIN - 13;
-    public final int MSG_ID_ALERT = MSG_ID_BEGIN - 14;
+    public final int MSG_ID_SURVEY_COMPLETE_EXCELLENT = MSG_ID_BEGIN - 11;
+    public final int MSG_ID_SURVEY_FAILED = MSG_ID_BEGIN - 12;
+    public final int MSG_ID_EXPANSION = MSG_ID_BEGIN - 13;
+    public final int MSG_ID_EXPANSION_ESTABLISHED = MSG_ID_BEGIN - 14;
+    public final int MSG_ID_ALERT = MSG_ID_BEGIN - 15;
 
 }
