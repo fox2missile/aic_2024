@@ -13,6 +13,7 @@ public class MoveTask extends Task {
     private final int MAX_TRACE = 3;
     private Location prevDest;
     boolean parallelSearchValid;
+    boolean parallelSearchAllowed;
 
     private Direction back;
     public MoveTask(C c) {
@@ -23,26 +24,38 @@ public class MoveTask extends Task {
         back = null;
         prevDest = null;
         parallelSearchValid = false;
+        parallelSearchAllowed = true;
     }
 
     @Override
     public void run() {
         if (c.destination == null || !c.canMove()) return;
         if (c.destination.equals(c.uc.getLocation())) return;
-        Direction dir = (parallelSearchValid && prevDest.equals(c.destination)) ?
-                defaultSearch.nextBestDirection(c.loc, c.loc.directionTo(c.destination)) :
-                defaultSearch.calculateBestDirection(c.destination, back, getPathFinderOptimalStepCount());
-        if (dir != null && c.canMove(dir)) {
-            prevDest = c.destination;
-            parallelSearchValid = true;
-            c.move(dir);
-            c.loc = c.uc.getLocation();
-            back = dir.opposite();
+
+        if (!c.destination.equals(prevDest)) {
+            parallelSearchAllowed = true;
+            parallelSearchValid = false;
+        }
+
+        if (parallelSearchAllowed) {
+            Direction dir = (parallelSearchValid) ?
+                    defaultSearch.nextBestDirection(c.loc, c.loc.directionTo(c.destination)) :
+                    defaultSearch.calculateBestDirection(c.destination, back, getPathFinderOptimalStepCount());
+            if (dir != null && c.canMove(dir)) {
+                prevDest = c.destination;
+                parallelSearchValid = true;
+                c.move(dir);
+                c.loc = c.uc.getLocation();
+                back = dir.opposite();
+            } else {
+                naivePathFinder.initTurn();
+                naivePathFinder.move(c.destination);
+                parallelSearchValid = false;
+                parallelSearchAllowed = false;
+            }
         } else {
             naivePathFinder.initTurn();
             naivePathFinder.move(c.destination);
-            prevDest = null;
-            parallelSearchValid = false;
         }
 //        mPathFinder.plan(c.destination);
 //        mPathFinder.executeMove();

@@ -97,8 +97,8 @@ public class HeadquarterTask extends Task {
 
             broadcastEnemyHq();
             enlistAttackersTask.run();
-            packageAssignerTask.run();
             expansionTask.run();
+            packageAssignerTask.run();
 
 
 
@@ -144,9 +144,10 @@ public class HeadquarterTask extends Task {
         if (symmetrySeekAttempts[symIdx] > 2) {
             pax = CarePackage.REINFORCED_SUIT;
         }
+        int givenOxygen = 50 + (10 * symmetrySeekAttempts[symIdx]);
         for (Direction d: c.getFirstDirs(c.loc.directionTo(sym))) {
-            if (uc.canEnlistAstronaut(d, 50, pax)) {
-                uc.enlistAstronaut(d, 50, pax);
+            if (uc.canEnlistAstronaut(d, givenOxygen, pax)) {
+                uc.enlistAstronaut(d, givenOxygen, pax);
                 AstronautInfo a = uc.senseAstronaut(c.loc.add(d));
                 rdb.sendSymmetricSeekerCommand(a.getID(), sym);
                 symmetryAssigned[symIdx] = true;
