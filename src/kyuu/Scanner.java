@@ -235,6 +235,7 @@ public class Scanner {
 
         // attack anyone nearest
         if (allyHqNearby) {
+            // todo: fix hyperjump bug
             value += 1000000 / c.loc.distanceSquared(enemy.getLocation());
         }
 

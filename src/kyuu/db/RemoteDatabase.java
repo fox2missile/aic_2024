@@ -668,6 +668,20 @@ public class RemoteDatabase extends Database {
         int encoded = dc.MSG_ID_MASK_SYMMETRIC_SEEKER_COMPLETE;
         encoded |= (msg.target.x << dc.MASKER_LOC_X_SHIFT);
         encoded |= (msg.target.y << dc.MASKER_LOC_Y_SHIFT);
+
+        int symmetry = 0;
+        if (msg.horizontalSymmetryPossible) {
+            symmetry |= (1 << dc.SYMMETRY_HORIZONTAL);
+        }
+        if (msg.verticalSymmetryPossible) {
+            symmetry |= (1 << dc.SYMMETRY_VERTICAL);
+        }
+        if (msg.rotationalSymmetryPossible) {
+            symmetry |= (1 << dc.SYMMETRY_ROTATIONAL);
+        }
+
+        encoded |= (symmetry << dc.SYMMETRIC_SEEKER_SYMMETRY_MASK_SHIFT);
+
         encoded |= msg.status;
         uc.performAction(ActionType.BROADCAST, null, encoded);
     }

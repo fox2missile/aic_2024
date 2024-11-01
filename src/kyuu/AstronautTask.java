@@ -11,7 +11,6 @@ public class AstronautTask extends Task {
     Task scanSectorTask;
     Task retrievePaxTask;
 
-    SeekSymmetryCommand currentSymmetryCmd;
     RetrievePackageCommand currentRetPaxCmd;
     DefenseTask currentDefTask;
     BuildDomeTask currentBuildDomeTask;
@@ -25,6 +24,7 @@ public class AstronautTask extends Task {
     Task currentExpansionWorkerTask;
     Task plantsGatheringTask;
     Task currentSettlerTask;
+    Task currentSymmetryTask;
     Direction spawnDir;
 
     private final int initialOxygen;
@@ -61,7 +61,7 @@ public class AstronautTask extends Task {
                 uc.eraseBroadcastBuffer(dc.MSG_SIZE_SYMMETRIC_SEEKER_CMD - 1);
                 return;
             }
-            currentSymmetryCmd = new SeekSymmetryCommand(new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage()));
+            currentSymmetryTask = new SymmetrySeekerTask(c, new SeekSymmetryCommand(new Location(uc.pollBroadcast().getMessage(), uc.pollBroadcast().getMessage())));
         };
 
         rdb.suppressionCommandReceiver = (int __) -> {
@@ -155,14 +155,7 @@ public class AstronautTask extends Task {
 
         Message msg = rdb.retrieveNextMessage();
         while (msg != null) {
-            if (msg instanceof EnemyHqMessage) {
-                if (currentSymmetryCmd != null) {
-                    EnemyHqMessage enemyHq = (EnemyHqMessage) msg;
-                    if (enemyHq.target.equals(currentSymmetryCmd.target)) {
-                        currentSymmetryCmd = null;
-                    }
-                }
-            } else if (msg instanceof DefenseCommand) {
+            if (msg instanceof DefenseCommand) {
                 currentDefTask = new DefenseTask(c, (DefenseCommand) msg);
             } else if (msg instanceof SurveyCommand) {
                 currentSurveyTask = new SurveyTask(c, (SurveyCommand) msg, plantsGatheringTask);
@@ -211,7 +204,7 @@ public class AstronautTask extends Task {
             canReport = canReport && currentDefTask == null;
             canReport = canReport && currentRetPaxCmd == null;
             canReport = canReport && currentSurveyTask == null;
-            canReport = canReport && currentSymmetryCmd == null;
+            canReport = canReport && currentSymmetryTask == null;
             canReport = canReport && uc.getAstronautInfo().getOxygen() < 10;
             if (canReport) {
                 rdb.sendDomeBuiltMsg(new DomeBuiltNotification(currentInquireDomeMsg.target));
@@ -221,13 +214,17 @@ public class AstronautTask extends Task {
     }
 
     private void doActions() {
+        if (currentSymmetryTask != null && currentSymmetryTask.isFinished()) {
+            currentSymmetryTask = null;
+        }
+
         if (currentDefTask != null) {
             currentDefTask.run();
             if (currentDefTask.isFinished()) {
                 currentDefTask = null;
             }
-        } else if (currentSymmetryCmd != null) {
-            handleSymmetrySeekCmd();
+        } else if (currentSymmetryTask != null) {
+            currentSymmetryTask.run();
         } else if (currentSettlerTask != null) {
             currentSettlerTask.run();
         } else if (currentRetPaxCmd != null) {
@@ -271,7 +268,7 @@ public class AstronautTask extends Task {
         for (StructureInfo s: uc.senseStructures(c.visionRange, c.team.getOpponent())) {
             if (s.getType() == StructureType.HQ) {
                 if (rdb.addEnemyHq(s.getLocation())) {
-                    rdb.sendSeekSymmetryCompleteMsg(new SeekSymmetryComplete(s.getLocation(), dc.SYMMETRIC_SEEKER_COMPLETE_FOUND_HQ));
+                    rdb.sendSeekSymmetryCompleteMsg(new SeekSymmetryComplete(s.getLocation(), dc.SYMMETRIC_SEEKER_COMPLETE_FOUND_HQ, false, false, false));
                 }
             }
         }
@@ -304,31 +301,7 @@ public class AstronautTask extends Task {
         if (c.destination != null && uc.getRound() > 300) {
             retrievePaxTask.run();
         }
-//        if (c.destination == null) {
-//            scanSectorTask.run();
-//        }
     }
-
-    private void handleSymmetrySeekCmd() {
-        if (!uc.canSenseLocation(currentSymmetryCmd.target)) {
-            if (uc.getAstronautInfo().getOxygen() < 2) {
-                SeekSymmetryComplete msg = new SeekSymmetryComplete(currentSymmetryCmd.target, dc.SYMMETRIC_SEEKER_COMPLETE_FAILED);
-                rdb.sendSeekSymmetryCompleteMsg(msg);
-                c.destination = null;
-                currentSymmetryCmd = null;
-            } else {
-                c.destination = currentSymmetryCmd.target;
-            }
-        } else {
-            StructureInfo s = uc.senseStructure(currentSymmetryCmd.target);
-            int status = s != null && s.getType() == StructureType.HQ && s.getTeam() != c.team ? dc.SYMMETRIC_SEEKER_COMPLETE_FOUND_HQ : dc.SYMMETRIC_SEEKER_COMPLETE_FOUND_NOTHING;
-            SeekSymmetryComplete msg = new SeekSymmetryComplete(currentSymmetryCmd.target, status);
-            rdb.sendSeekSymmetryCompleteMsg(msg);
-            c.destination = null;
-            currentSymmetryCmd = null;
-        }
-    }
-
 
     private boolean handleRetrievePax() {
         if (uc.canSenseLocation(currentRetPaxCmd.target) && uc.senseCarePackage(currentRetPaxCmd.target) == null) {
