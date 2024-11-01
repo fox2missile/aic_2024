@@ -26,12 +26,14 @@ public class RemoteDatabase extends Database {
     public boolean subscribeBuildDomeCommand = false;
     public boolean subscribeDomeBuilt = false;
     public boolean subscribeDomeDestroyed = false;
+    public boolean subscribeExpansionMissedMsg = false;
     public boolean subscribeAlert = true;
 
     public int[][] surveyorStates;
     public int[][] lastBadSurvey;
     public Location[][] expansionSites;
     public int[][] expansionStates;
+    public int[][] expansionMissed;
 
 
 
@@ -59,6 +61,7 @@ public class RemoteDatabase extends Database {
         expansionSites = new Location[dc.EXPANSION_SIZE * dc.MAX_HQ][c.allDirs.length];
         expansionStates = new int[dc.EXPANSION_SIZE * dc.MAX_HQ][c.allDirs.length];
         lastBadSurvey = new int[dc.EXPANSION_SIZE * dc.MAX_HQ][c.allDirs.length];
+        expansionMissed = new int[dc.EXPANSION_SIZE * dc.MAX_HQ][c.allDirs.length];
     }
 
     public void clearBadSurveyHistory(int expansionId, int steps) {
@@ -354,7 +357,7 @@ public class RemoteDatabase extends Database {
                                 new Location((fullMsg & dc.MASKER_LOC_X) >> dc.MASKER_LOC_X_SHIFT,
                                         (fullMsg & dc.MASKER_LOC_Y) >> dc.MASKER_LOC_Y_SHIFT),
                                 expansionId
-                                );
+                        );
                         for (int i = 0; i < c.allDirs.length; i++) {
                             if (expansionSites[expansionId][i] == null) {
                                 continue;
@@ -362,6 +365,25 @@ public class RemoteDatabase extends Database {
                             if (Vector2D.chebysevDistance(expansionSites[expansionId][i], ex.target) < 3) {
                                 c.logger.log("Expansion established: %s", ex.target);
                                 expansionStates[expansionId][i] = dc.EXPANSION_STATE_ESTABLISHED;
+                                return ex;
+                            }
+                        }
+                    }
+
+                } // no payload
+            } else if (msgId == dc.MSG_ID_EXPANSION_MISSED) {
+                if (subscribeExpansionMissedMsg) {
+                    int expansionId = fullMsg & dc.EXPANSION_MISSED_EXPANSION_ID_MASKER;
+                    if (isSubscribingExpansionId(expansionId)) {
+                        ExpansionEstablishedMessage ex = new ExpansionEstablishedMessage(
+                                new Location((fullMsg & dc.MASKER_LOC_X) >> dc.MASKER_LOC_X_SHIFT,
+                                        (fullMsg & dc.MASKER_LOC_Y) >> dc.MASKER_LOC_Y_SHIFT),
+                                expansionId
+                        );
+                        for (int i = 0; i < c.allDirs.length; i++) {
+                            if (Vector2D.chebysevDistance(expansionSites[expansionId][i], ex.target) < 3) {
+                                c.logger.log("Expansion missed: %s", ex.target);
+                                expansionMissed[expansionId][i]++;
                                 return ex;
                             }
                         }
@@ -521,6 +543,15 @@ public class RemoteDatabase extends Database {
         uc.performAction(ActionType.BROADCAST, null, encoded);
     }
 
+    public void sendExpansionMissedMsg(ExpansionMissedMessage msg) {
+        c.logger.log("expansion missed: %s", msg.target);
+        int encoded = dc.MSG_ID_MASK_EXPANSION_MISSED;
+        encoded |= (msg.target.x << dc.MASKER_LOC_X_SHIFT);
+        encoded |= (msg.target.y << dc.MASKER_LOC_Y_SHIFT);
+        encoded |= msg.expansionId;
+        uc.performAction(ActionType.BROADCAST, null, encoded);
+    }
+
     public void sendDomeBuiltMsg(DomeBuiltNotification msg) {
         c.logger.log("witnessed dome built: %s", msg.target);
         int encoded = dc.MSG_ID_MASK_DOME_BUILT;
@@ -599,6 +630,8 @@ public class RemoteDatabase extends Database {
             return dc.MSG_ID_DOME_BUILT;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_DOME_DESTROYED) {
             return dc.MSG_ID_DOME_DESTROYED;
+        } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_EXPANSION_MISSED) {
+            return dc.MSG_ID_EXPANSION_MISSED;
         }
         return 0;
     }

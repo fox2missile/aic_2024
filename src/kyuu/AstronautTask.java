@@ -126,7 +126,6 @@ public class AstronautTask extends Task {
             canReport = canReport && uc.getAstronautInfo().getOxygen() < 10;
             if (canReport) {
                     rdb.sendDomeBuiltMsg(new DomeBuiltNotification(currentInquireDomeMsg.target));
-                    currentInquireDomeMsg = null;
             }
         }
     }

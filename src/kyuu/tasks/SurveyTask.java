@@ -100,7 +100,7 @@ public class SurveyTask extends Task {
                 score += 15;
             }
 
-            score -= uc.senseObjects(MapObject.WATER, c.visionRange).length;
+            score -= ((uc.senseObjects(MapObject.WATER, c.visionRange).length * 2) / 3);
 
             int status = dc.SURVEY_BAD;
 

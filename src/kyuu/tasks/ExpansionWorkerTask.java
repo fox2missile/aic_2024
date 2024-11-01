@@ -6,6 +6,7 @@ import kyuu.Vector2D;
 import kyuu.message.DomeDestroyedNotification;
 import kyuu.message.ExpansionCommand;
 import kyuu.message.ExpansionEstablishedMessage;
+import kyuu.message.ExpansionMissedMessage;
 
 public class ExpansionWorkerTask extends Task {
 
@@ -95,12 +96,14 @@ public class ExpansionWorkerTask extends Task {
             if (uc.canPerformAction(ActionType.TERRAFORM, bestDir, 1)) {
                 uc.performAction(ActionType.TERRAFORM, bestDir, 1);
             } else {
-                for (Direction dir: c.getFirstDirs(expansionDirection.opposite())) {
-                    if (uc.canPerformAction(ActionType.TERRAFORM, dir, 1)) {
-                        uc.performAction(ActionType.TERRAFORM, dir, 1);
-                    }
-                }
+//                for (Direction dir: c.getFirstDirs(expansionDirection.opposite())) {
+//                    if (uc.canPerformAction(ActionType.TERRAFORM, dir, 1)) {
+//                        uc.performAction(ActionType.TERRAFORM, dir, 1);
+//                    }
+//                }
             }
+
+            rdb.sendExpansionMissedMsg(new ExpansionMissedMessage(cmd.target, cmd.expansionId));
         }
 
         if (!currentTarget.equals(cmd.target) && Vector2D.chebysevDistance(c.loc, currentTarget) <= 2 && !currentTarget.equals(cmd.possibleNext)) {
