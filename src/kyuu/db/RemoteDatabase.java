@@ -3,6 +3,7 @@ package kyuu.db;
 import aic2024.user.*;
 import kyuu.C;
 import kyuu.Vector2D;
+import kyuu.fast.CircularLocBuffer;
 import kyuu.fast.FastLocIntMap;
 import kyuu.fast.FastLocSet;
 import kyuu.message.*;
@@ -42,6 +43,7 @@ public class RemoteDatabase extends Database {
 
     private final FastLocIntMap knownAlertLocations;
     private final FastLocSet dangerSectors;
+    CircularLocBuffer recentDangerSectors;
     public int alertCount;
 
     public RemoteDatabase(C c) {
@@ -50,6 +52,7 @@ public class RemoteDatabase extends Database {
         hqIdx = -1;
         knownAlertLocations = new FastLocIntMap();
         dangerSectors = new FastLocSet();
+        recentDangerSectors = new CircularLocBuffer(5);
         alertCount = 0;
     }
 
@@ -467,6 +470,9 @@ public class RemoteDatabase extends Database {
                     AlertMessage msg = new AlertMessage(loc, strength);
                     dangerSectors.add(c.getSector(msg.target));
                     knownAlertLocations.add(msg.target, uc.getRound());
+//                    if (!recentDangerSectors.contains(msg.target)) {
+//                        recentDangerSectors.pushBack(msg.target);
+//                    }
                     alertCount++;
                     return msg;
                 } // no payload

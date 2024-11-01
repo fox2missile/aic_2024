@@ -4,16 +4,15 @@ import aic2024.user.*;
 import kyuu.C;
 import kyuu.Vector2D;
 import kyuu.fast.FastIntIntMap;
-import kyuu.fast.FastIntSet;
 
-public class EnlistSuppressionTask extends Task {
+public class EnlistSuppressorsTask extends Task {
 
 
     FastIntIntMap suppressors;
 
     int cooldown;
 
-    public EnlistSuppressionTask(C c) {
+    public EnlistSuppressorsTask(C c) {
         super(c);
         cooldown = 10;
         suppressors = new FastIntIntMap();
