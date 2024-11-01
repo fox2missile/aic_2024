@@ -102,7 +102,7 @@ class TestServer:
                     print("Player: {} | opponent: {} | wins: {} out of {} ({:.2f}%) | version: {} ".format(
                         self.main_player, test_player, win_count, total_matches,
                         win_count/total_matches*100, self.id))
-                    print("{:20} | {:4} | {:4}".format("map", "side", "result"))
+                    print("{:20} | {:4} | {:4} | {:10}".format("map", "side", "result", "reason"))
                     for result in results.list:
                         opponent = result.match.player_1 if result.match.player_1 != self.main_player \
                             else result.match.player_2
@@ -110,7 +110,7 @@ class TestServer:
                             continue
                         side = 'A' if result.match.player_1 == self.main_player else 'B'
                         is_win = 'win' if result.winner == self.main_player else 'lose'
-                        print("{:20} | {:4} | {:4}".format(result.match.map, side, is_win))
+                        print("{:20} | {:4} | {:4} | {:3}".format(result.match.map, side, is_win, result.win_reason[:3]))
 
                 if pending_matches == 0:
                     self.log("finished")
