@@ -3,10 +3,7 @@ package kyuu;
 
 import aic2024.user.*;
 import kyuu.fast.FastLocSet;
-import kyuu.message.EnemyHqMessage;
-import kyuu.message.Message;
-import kyuu.message.SeekSymmetryCommand;
-import kyuu.message.SeekSymmetryComplete;
+import kyuu.message.*;
 import kyuu.pathfinder.ParallelSearch;
 import kyuu.tasks.DefenseAssginerTask;
 import kyuu.tasks.ExpansionTask;
@@ -36,7 +33,7 @@ public class HeadquarterTask extends Task {
     ParallelSearch packageSearch;
 
     Task packageAssignerTask;
-    Task defenseAssignerTask;
+    DefenseAssginerTask defenseAssignerTask;
     Task expansionTask;
     int maxReinforcedSuits;
     int originalMaxReinforcedSuits;
@@ -83,6 +80,7 @@ public class HeadquarterTask extends Task {
             rdb.sendHqInfo();
         } else if (uc.getRound() == 1) {
             rdb.initHqLocs();
+            rdb.sendHqInfo();
         } else if (uc.getRound() == 2) {
             initSymmetryCandidates();
         } else  {
@@ -100,6 +98,8 @@ public class HeadquarterTask extends Task {
                             symmetryAssigned[i] = true;
                         }
                     }
+                } else if (msg instanceof AlertMessage) {
+                    defenseAssignerTask.assignDefenders((AlertMessage) msg);
                 }
                 msg = rdb.retrieveNextMessage();
             }

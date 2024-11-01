@@ -36,6 +36,7 @@ public class ScanSectorTask extends Task {
 
     @Override
     public void run() {
+        c.s.trySendAlert();
         loc = c.loc;
         if (loc.equals(prevLoc) && targetSector != null) {
             targetCountdown -= 6;

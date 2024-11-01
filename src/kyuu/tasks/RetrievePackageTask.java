@@ -57,6 +57,8 @@ public class RetrievePackageTask extends Task {
             target = bestPax;
             c.destination = bestPax.getLocation();
             c.logger.log("pax: %s - %s", target.getCarePackageType(), target.getLocation());
+        } else {
+            c.s.trySendAlert();
         }
     }
 

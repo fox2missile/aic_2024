@@ -3,6 +3,8 @@ package kyuu.db;
 import aic2024.user.*;
 import kyuu.C;
 import kyuu.Vector2D;
+import kyuu.fast.FastLocIntMap;
+import kyuu.fast.FastLocSet;
 import kyuu.message.*;
 
 public class RemoteDatabase extends Database {
@@ -21,6 +23,7 @@ public class RemoteDatabase extends Database {
     public boolean subscribePackageRetrievalCommand = false;
     public boolean subscribeSurveyComplete = false;
     public boolean subscribeExpansionEstablished = false;
+    public boolean subscribeAlert = true;
 
     public int[][] surveyorStates;
     public Location[][] expansionSites;
@@ -30,10 +33,13 @@ public class RemoteDatabase extends Database {
 
     public int hqIdx;
 
+    private FastLocIntMap knownAlertLocations;
+
     public RemoteDatabase(C c) {
         super(c);
         enemyHq = new Location[3];
         hqIdx = -1;
+        knownAlertLocations = new FastLocIntMap();
     }
 
     public void initExpansionData() {
@@ -44,10 +50,12 @@ public class RemoteDatabase extends Database {
 
     public void sendHqInfo() {
         uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_HQ);
-        hqIdx = 0;
-        while (uc.pollBroadcast() != null) {
-            // NOTE: no one else should broadcast at round 0
-            hqIdx++;
+        if (hqIdx == -1) {
+            hqIdx = 0;
+            while (uc.pollBroadcast() != null) {
+                // NOTE: no one else should broadcast at round 0
+                hqIdx++;
+            }
         }
     }
 
@@ -61,8 +69,13 @@ public class RemoteDatabase extends Database {
         }
         hqCount = 1 + otherHqCount;
         hqLocs = new Location[hqCount];
-        hqLocs[0] = c.loc;
-        System.arraycopy(tempLocs, 0, hqLocs, 1, otherHqCount);
+        hqLocs[hqIdx] = c.loc;
+        if (otherHqCount >= 1) {
+            hqLocs[(hqIdx + 1) % hqCount] = tempLocs[0];
+        }
+        if (otherHqCount == 2) {
+            hqLocs[(hqIdx + 2) % hqCount] = tempLocs[1];
+        }
     }
 
     public void sendSymmetricSeekerCommand(int targetId, Location targetLoc) {
@@ -127,6 +140,7 @@ public class RemoteDatabase extends Database {
         uc.performAction(ActionType.BROADCAST, null, state);
         uc.performAction(ActionType.BROADCAST, null, convertToRemoteExpansionId(expansionId));
     }
+
 
     public Message retrieveNextMessage() {
         BroadcastInfo b = uc.pollBroadcast();
@@ -248,6 +262,15 @@ public class RemoteDatabase extends Database {
                     // skip payload
                     uc.eraseBroadcastBuffer(dc.MSG_SIZE_ENEMY_HQ);
                 }
+            } else if (msgId == dc.MSG_ID_ALERT) {
+                if (subscribeAlert) {
+                    Location loc = new Location((fullMsg & dc.MASKER_LOC_X) >> dc.MASKER_LOC_X_SHIFT,
+                            (fullMsg & dc.MASKER_LOC_Y) >> dc.MASKER_LOC_Y_SHIFT);
+                    int strength = fullMsg & dc.ALERT_STRENGTH_MASKER;
+                    AlertMessage msg = new AlertMessage(loc, strength);
+                    knownAlertLocations.add(msg.target, uc.getRound());
+                    return msg;
+                } // no payload
             } else if (msgId == dc.MSG_ID_ENEMY_HQ_DESTROYED) {
                 if (subscribeEnemyHq) {
                     Location loc = new Location((fullMsg & dc.MASKER_LOC_X) >> dc.MASKER_LOC_X_SHIFT,
@@ -331,6 +354,31 @@ public class RemoteDatabase extends Database {
         uc.performAction(ActionType.BROADCAST, null, encoded);
     }
 
+    public void trySendAlert(AlertMessage msg) {
+        cleanAlert();
+        for (Location loc: knownAlertLocations.getKeys()) {
+            if (Vector2D.chebysevDistance(loc, msg.target) < 4) {
+                c.logger.log("tried to alert at %s but previous alert is still valid", msg.target);
+                return;
+            }
+        }
+        c.logger.log("alert: %s ; enemy strength: %s", msg.target, msg.enemyStrength);
+        int encoded = dc.MSG_ID_MASK_ALERT;
+        encoded |= (msg.target.x << dc.MASKER_LOC_X_SHIFT);
+        encoded |= (msg.target.y << dc.MASKER_LOC_Y_SHIFT);
+        encoded |= msg.enemyStrength;
+        knownAlertLocations.add(msg.target, uc.getRound());
+        uc.performAction(ActionType.BROADCAST, null, encoded);
+    }
+
+    public void cleanAlert() {
+        for (Location loc: knownAlertLocations.getKeys()) {
+            if (uc.getRound() - knownAlertLocations.getVal(loc) > 10) {
+                knownAlertLocations.remove(loc);
+            }
+        }
+    }
+
     public int getMsgId(int broadcasted) {
         if (broadcasted == dc.MSG_ID_SYMMETRIC_SEEKER_CMD) {
             return dc.MSG_ID_SYMMETRIC_SEEKER_CMD;
@@ -356,6 +404,8 @@ public class RemoteDatabase extends Database {
             return dc.MSG_ID_ENEMY_HQ_DESTROYED;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_EXPANSION_ESTABLISHED) {
             return dc.MSG_ID_EXPANSION_ESTABLISHED;
+        } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_ALERT) {
+            return dc.MSG_ID_ALERT;
         }
         return 0;
     }

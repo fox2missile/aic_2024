@@ -4,7 +4,9 @@ import aic2024.user.AstronautInfo;
 import aic2024.user.CarePackage;
 import aic2024.user.Direction;
 import kyuu.C;
+import kyuu.Vector2D;
 import kyuu.fast.FastIntIntMap;
+import kyuu.message.AlertMessage;
 
 public class DefenseAssginerTask extends Task {
 
@@ -28,7 +30,7 @@ public class DefenseAssginerTask extends Task {
                     continue;
                 }
             }
-            if (!c.s.isReachableDirectly(a.getLocation())) {
+            if (!c.s.isReachableDirectly(a.getLocation()) && a.getCarePackage() != CarePackage.REINFORCED_SUIT) {
                 continue;
             }
             if (uc.getStructureInfo().getOxygen() < 11) {
@@ -77,6 +79,39 @@ public class DefenseAssginerTask extends Task {
 
             }
         }
+    }
+
+    public void assignDefenders(AlertMessage alert) {
+        c.logger.log("trying to assign defenders from alert message..");
+        if (Vector2D.chebysevDistance(c.loc, alert.target) > 15) {
+            return;
+        }
+        int nearestHqIdx = Vector2D.getNearest(alert.target, rdb.hqLocs, rdb.hqCount);
+        if (nearestHqIdx != rdb.hqIdx) {
+            if (Vector2D.chebysevDistance(alert.target, c.loc) < 5) {
+                alert.enemyStrength /= 2;
+            } else {
+                return;
+            }
+        }
+
+        int oxygenNeeded = Math.max(11, Vector2D.chebysevDistance(c.loc, alert.target) + 5);
+        for (Direction dir: c.getFirstDirs(c.loc.directionTo(alert.target))) {
+            if (uc.canEnlistAstronaut(dir, oxygenNeeded, null)) {
+                uc.enlistAstronaut(dir, oxygenNeeded, null);
+                int enlistId = uc.senseAstronaut(c.loc.add(dir)).getID();
+                rdb.sendDefenseCommand(enlistId, alert.target);
+                ldb.pushAssignedThisRound(enlistId);
+                uc.drawLineDebug(c.loc.add(dir), alert.target, 0, 0, 255);
+                alert.enemyStrength--;
+            }
+            if (alert.enemyStrength <= 0) {
+                break;
+            }
+
+
+        }
+
     }
 
     private void cleanup() {

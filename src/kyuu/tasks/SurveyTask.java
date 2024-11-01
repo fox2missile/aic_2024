@@ -26,6 +26,7 @@ public class SurveyTask extends Task {
 
     @Override
     public void run() {
+        c.s.trySendAlert();
         int dist = Vector2D.manhattanDistance(c.loc, cmd.target);
         c.destination = cmd.target;
         if (uc.getAstronautInfo().getOxygen() < 2) {
