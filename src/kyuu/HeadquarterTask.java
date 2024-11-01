@@ -32,6 +32,9 @@ public class HeadquarterTask extends Task {
     Task packageAssignerTask;
     Task defenseAssignerTask;
     Task expansionTask;
+    int maxReinforcedSuits;
+
+    boolean prevDeployReinforcedSuits;
 
     HeadquarterTask(C c) {
         super(c);
@@ -44,6 +47,14 @@ public class HeadquarterTask extends Task {
         packageAssignerTask = new PackageAssignerTask(c);
         defenseAssignerTask = new DefenseAssginerTask(c);
         expansionTask = new ExpansionTask(c);
+        maxReinforcedSuits = 0;
+        for (Direction dir: c.allDirs) {
+            Location check = c.loc.add(dir);
+            if (!uc.isOutOfMap(check) && uc.canSenseLocation(check) && !c.isObstacle(uc.senseObjectAtLocation(check))) {
+                maxReinforcedSuits++;
+            }
+        }
+        prevDeployReinforcedSuits = false;
     }
 
 
@@ -83,8 +94,8 @@ public class HeadquarterTask extends Task {
                 while (enlistSymmetrySeeker()) {}
             } else {
                 broadcastEnemyHq();
-                packageAssignerTask.run();
                 enlistAttackers();
+                packageAssignerTask.run();
                 expansionTask.run();
             }
 
@@ -95,19 +106,31 @@ public class HeadquarterTask extends Task {
     private void enlistAttackers() {
         int nearestEnemyHqIdx = Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize);
         Location targetHq = rdb.enemyHq[nearestEnemyHqIdx];
-        if (!c.s.isReachableDirectly(targetHq)) {
-            return;
-        }
-        int atkCost = Vector2D.manhattanDistance(c.loc, targetHq) * 3 / 2;
-        if (atkCost < 11) {
-            atkCost = 11;
-        }
-        c.logger.log("enlisting attackers with cost %d", atkCost);
+        boolean canBoom = uc.getStructureInfo().getCarePackagesOfType(CarePackage.REINFORCED_SUIT) > 8;
+        int singleAtkCost = (Vector2D.manhattanDistance(c.loc, targetHq) * 5 / 4) + 32;
+        canBoom = canBoom && uc.getStructureInfo().getOxygen() >= singleAtkCost * 8;
+
+        int countEnlist = 0;
         for (Direction dir: c.getFirstDirs(c.loc.directionTo(targetHq))) {
-            if (c.uc.canEnlistAstronaut(dir, atkCost, null)) {
-                c.uc.enlistAstronaut(dir, atkCost, null);
+            if (c.uc.canEnlistAstronaut(dir, singleAtkCost, CarePackage.REINFORCED_SUIT)) {
+                countEnlist++;
             }
         }
+
+        canBoom = (canBoom && countEnlist >= (maxReinforcedSuits - 2)) || prevDeployReinforcedSuits;
+
+        if (!c.s.isReachableDirectly(targetHq) && !canBoom) {
+            prevDeployReinforcedSuits = false;
+            return;
+        }
+
+        c.logger.log("enlisting attackers with cost %d", singleAtkCost);
+        for (Direction dir: c.getFirstDirs(c.loc.directionTo(targetHq))) {
+            if (c.uc.canEnlistAstronaut(dir, singleAtkCost, CarePackage.REINFORCED_SUIT)) {
+                c.uc.enlistAstronaut(dir, singleAtkCost, CarePackage.REINFORCED_SUIT);
+            }
+        }
+        prevDeployReinforcedSuits = true;
     }
 
     private boolean enlistSymmetrySeeker() {

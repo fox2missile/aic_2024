@@ -152,7 +152,7 @@ public class ExpansionWorkerTask extends Task {
 
     private boolean valuableTargetFound() {
         for (CarePackageInfo pax: uc.senseCarePackages(c.visionRange)) {
-            if (pax.getCarePackageType() == CarePackage.OXYGEN_TANK || pax.getCarePackageType() == CarePackage.SETTLEMENT ||
+            if (pax.getCarePackageType() == CarePackage.OXYGEN_TANK || pax.getCarePackageType() == CarePackage.SETTLEMENT || pax.getCarePackageType() == CarePackage.REINFORCED_SUIT ||
                     (pax.getCarePackageType() == CarePackage.PLANTS && uc.getAstronautInfo().getOxygen() <= 7)) {
                 return true;
             }

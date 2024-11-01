@@ -40,7 +40,7 @@ public class RetrievePackageTask extends Task {
             } else if (carePackageType == CarePackage.RADIO) {
                 score += 10;
             } else if (carePackageType == CarePackage.REINFORCED_SUIT) {
-                score += 50;
+                score += 200;
             } else if (carePackageType == CarePackage.SURVIVAL_KIT) {
                 score += 50;
             } else if (carePackageType == CarePackage.OXYGEN_TANK) {
