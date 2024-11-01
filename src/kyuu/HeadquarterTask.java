@@ -23,6 +23,12 @@ public class HeadquarterTask extends Task {
 
     Location[] symmetryCandidates;
     boolean[] symmetryAssigned;
+    boolean[] symmetryComplete;
+
+    int[] symmetrySeekAttempts;
+    int[] symmetrySeekTimeout;
+
+    final int SYMMETRY_SEEK_COOLDOWN;
 
 
     boolean enemyHqBroadcasted;
@@ -33,6 +39,7 @@ public class HeadquarterTask extends Task {
     Task defenseAssignerTask;
     Task expansionTask;
     int maxReinforcedSuits;
+    int originalMaxReinforcedSuits;
 
     boolean prevDeployReinforcedSuits;
 
@@ -54,6 +61,11 @@ public class HeadquarterTask extends Task {
                 maxReinforcedSuits++;
             }
         }
+        originalMaxReinforcedSuits = maxReinforcedSuits;
+        if (maxReinforcedSuits > 4) {
+            maxReinforcedSuits = 4;
+        }
+        SYMMETRY_SEEK_COOLDOWN = Math.max(uc.getMapWidth() + 5, uc.getMapHeight() + 5);
         prevDeployReinforcedSuits = false;
     }
 
@@ -92,21 +104,25 @@ public class HeadquarterTask extends Task {
             }
             if (rdb.enemyHqSize == 0) {
                 while (enlistSymmetrySeeker()) {}
-            } else {
-                broadcastEnemyHq();
-                enlistAttackers();
-                packageAssignerTask.run();
-                expansionTask.run();
             }
+
+            broadcastEnemyHq();
+            enlistAttackers();
+            packageAssignerTask.run();
+            expansionTask.run();
+
 
 
         }
     }
 
     private void enlistAttackers() {
+        if (rdb.enemyHqSize == 0) {
+            return;
+        }
         int nearestEnemyHqIdx = Vector2D.getNearest(c.loc, rdb.enemyHq, rdb.enemyHqSize);
         Location targetHq = rdb.enemyHq[nearestEnemyHqIdx];
-        boolean canBoom = uc.getStructureInfo().getCarePackagesOfType(CarePackage.REINFORCED_SUIT) > 8;
+        boolean canBoom = uc.getStructureInfo().getCarePackagesOfType(CarePackage.REINFORCED_SUIT) > maxReinforcedSuits;
         int singleAtkCost = (Vector2D.manhattanDistance(c.loc, targetHq) * 5 / 4) + 32;
         canBoom = canBoom && uc.getStructureInfo().getOxygen() >= singleAtkCost * 8;
 
@@ -131,14 +147,24 @@ public class HeadquarterTask extends Task {
             }
         }
         prevDeployReinforcedSuits = true;
+        maxReinforcedSuits = originalMaxReinforcedSuits;
     }
 
     private boolean enlistSymmetrySeeker() {
         int nearestSym = -1;
         int distNearest = Integer.MAX_VALUE;
         for (int i = 0; i < symmetryCandidates.length; i++) {
-            if (symmetryAssigned[i]) {
+            if (symmetryComplete[i]) {
                 continue;
+            }
+            if (symmetryAssigned[i]) {
+                symmetrySeekTimeout[i]--;
+                if (symmetrySeekTimeout[i] > 0) {
+                    continue;
+                } else {
+                    symmetryAssigned[i] = false;
+                    c.logger.log("symmetry seeker timeout: %s", symmetryCandidates[i]);
+                }
             }
             Location sym = symmetryCandidates[i];
             int dist = c.loc.distanceSquared(sym);
@@ -159,12 +185,18 @@ public class HeadquarterTask extends Task {
 
     private boolean enlistSymmetrySeeker(int symIdx) {
         Location sym = symmetryCandidates[symIdx];
+        CarePackage pax = null;
+        if (symmetrySeekAttempts[symIdx] > 2) {
+            pax = CarePackage.REINFORCED_SUIT;
+        }
         for (Direction d: c.getFirstDirs(c.loc.directionTo(sym))) {
-            if (uc.canEnlistAstronaut(d, 50, null)) {
-                uc.enlistAstronaut(d, 50, null);
+            if (uc.canEnlistAstronaut(d, 50, pax)) {
+                uc.enlistAstronaut(d, 50, pax);
                 AstronautInfo a = uc.senseAstronaut(c.loc.add(d));
                 rdb.sendSymmetricSeekerCommand(a.getID(), sym);
                 symmetryAssigned[symIdx] = true;
+                symmetrySeekAttempts[symIdx]++;
+                symmetrySeekTimeout[symIdx] = symmetrySeekAttempts[symIdx] * SYMMETRY_SEEK_COOLDOWN;
                 return true;
             }
         }
@@ -174,6 +206,9 @@ public class HeadquarterTask extends Task {
     private void initSymmetryCandidates() {
         symmetryCandidates = new Location[rdb.hqCount * 3];
         symmetryAssigned = new boolean[rdb.hqCount * 3];
+        symmetryComplete = new boolean[rdb.hqCount * 3];
+        symmetrySeekAttempts = new int[rdb.hqCount * 3];
+        symmetrySeekTimeout = new int[rdb.hqCount * 3];
         FastLocSet symSet = new FastLocSet();
         // todo: handle allies HQ in symmetry
         for (int i = 0; i < rdb.hqCount; i++) {
@@ -254,12 +289,14 @@ public class HeadquarterTask extends Task {
         } else if (status == dc.SYMMETRIC_SEEKER_COMPLETE_FOUND_HQ) {
             symmetryAssigned[symIdx] = true;
             c.logger.log("FOUND ENEMY HQ: %s", target);
+            symmetryComplete[symIdx] = true;
 
             rdb.addEnemyHq(symmetryCandidates[symIdx]);
         } else {
             for (int i = 0; i < symmetryCandidates.length; i++) {
                 if (i % 3 == symIdx % 3) {
                     symmetryAssigned[i] = true;
+                    symmetryComplete[symIdx] = true;
                 }
             }
             if (symIdx % 3 == SYMMETRY_HORIZONTAL) {
