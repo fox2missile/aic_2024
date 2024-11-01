@@ -20,9 +20,7 @@ public class SettlementTask extends Task {
 
     public SettlementTask(C c) {
         super(c);
-        rdb.subscribeEnemyHq = true;
-        rdb.subscribeSurveyComplete = true;
-        rdb.subscribeExpansionEstablished = true;defenseTask = new DefenseAssginerTask(c);
+        defenseTask = new DefenseAssginerTask(c);
         packageAssignerTask = new PackageAssignerTask(c);
         enlistAttackersTask = new EnlistAttackersTask(c);
         settlementStrategyTask = new SettlementStrategyTask(c);
@@ -59,6 +57,9 @@ public class SettlementTask extends Task {
             return;
         } else if (uc.getRound() == c.spawnRound + 1) {
             rdb.introduceSettlement();
+            rdb.subscribeEnemyHq = true;
+            rdb.subscribeSurveyComplete = true;
+            rdb.subscribeExpansionEstablished = true;
             rdb.newSettlementReceiver = (int __) -> {
                 BroadcastInfo idxBroadcast = uc.pollBroadcast();
                 Location settlementLoc = idxBroadcast.getLocation();
