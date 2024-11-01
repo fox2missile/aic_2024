@@ -87,8 +87,6 @@ public class C {
 
     final MapObject[] obstacleObjectTypes = {
             MapObject.WATER,
-            MapObject.DOME,
-            MapObject.HYPERJUMP,
     };
 
     public int bitCount(int num) {
