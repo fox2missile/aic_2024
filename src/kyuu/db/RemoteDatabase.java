@@ -10,6 +10,7 @@ import kyuu.message.*;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Iterator;
 
 public class RemoteDatabase extends Database {
 
@@ -22,6 +23,7 @@ public class RemoteDatabase extends Database {
 //    public boolean subscribeSeekSymmetryCommand = false;
 //    public boolean subscribeSeekSymmetryComplete = false;
     public MessageReceiver seekSymmetryCompleteReceiver;
+    public MessageReceiver seekSymmetryCompleteReceiver2;
     public MessageReceiver seekSymmetryCommandReceiver;
     public MessageReceiver suppressionCommandReceiver;
     public MessageReceiver buildDomeCommandReceiver;
@@ -33,9 +35,13 @@ public class RemoteDatabase extends Database {
     public MessageReceiver settlementCommandReceiver;
     public MessageReceiver baseHeartbeatReceiver;
     public MessageReceiver newSettlementReceiver;
+    public MessageReceiver newSettlementReceiver2;
     public MessageReceiver retrievePackageFailedReceiver;
     public MessageReceiver retrievePackageCommandReceiver;
     public MessageReceiver suppressorHeartbeatReceiver;
+    public MessageReceiver worldMapperCommandReceiver;
+    public MessageReceiver worldObstacleReceiver;
+    public MessageReceiver pathReceiver;
     public boolean subscribeEnemyHq = false;
     public boolean subscribeDefenseCommand = false;
     public boolean subscribeSurveyCommand = false;
@@ -67,6 +73,9 @@ public class RemoteDatabase extends Database {
     public final int RECENT_DANGER_TIMEOUT = 30;
     public int alertCount;
 
+    private final int[] broadcastBuffer;
+    private int broadcastBufferLength;
+
     public RemoteDatabase(C c) {
         super(c);
         enemyHq = new Location[3];
@@ -81,6 +90,28 @@ public class RemoteDatabase extends Database {
         sectorDistReportCount = new FastLocIntMap();
         alertCount = 0;
         baseHeartbeats = new int[dc.MAX_BASES];
+        if (uc.isStructure()) {
+            broadcastBuffer = new int[1000];
+        } else {
+            broadcastBuffer = new int[0];
+        }
+        broadcastBufferLength = 0;
+    }
+
+    public void flushBroadcastBuffer() {
+        if (broadcastBufferLength == 0) {
+            return;
+        }
+        int minEnergy = broadcastBufferLength * 100;
+        if (uc.getEnergyLeft() < minEnergy) {
+            return;
+        }
+        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_HQ_SETUP_BROADCAST_MARKER);
+        uc.performAction(ActionType.BROADCAST, null, broadcastBufferLength);
+        for (int i = 0; i < broadcastBufferLength; i++) {
+            uc.performAction(ActionType.BROADCAST, null, broadcastBuffer[i]);
+        }
+        broadcastBufferLength = 0;
     }
 
     public boolean isKnownDangerousLocation(Location loc) {
@@ -141,7 +172,7 @@ public class RemoteDatabase extends Database {
         baseHeartbeatReceiver = (int __) -> {
             BroadcastInfo idxBroadcast = uc.pollBroadcast();
             int idx = idxBroadcast.getMessage();
-            baseHeartbeats[idx] = uc.getRound();
+            baseHeartbeats[idx] = idxBroadcast.getRound();
         };
     }
 
@@ -176,6 +207,21 @@ public class RemoteDatabase extends Database {
     public void sendBaseHeartbeat() {
         uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_BASE_HEARTBEAT);
         uc.performAction(ActionType.BROADCAST, null, baseIdx);
+        baseHeartbeats[baseIdx] = uc.getRound();
+    }
+
+    private int getPrimaryBaseIdx() {
+        for (int i = 0; i < baseCount; i++) {
+            if (uc.getRound() - baseHeartbeats[i] < 3) {
+                return i;
+            }
+        }
+        // impossible
+        throw new IllegalStateException("All bases gone already");
+    }
+
+    public boolean isPrimaryBase() {
+        return getPrimaryBaseIdx() == baseIdx;
     }
 
     public void initHqLocs() {
@@ -206,10 +252,10 @@ public class RemoteDatabase extends Database {
     }
 
     public void sendGetPackagesCommand(int targetId, Location targetLoc) {
-        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_GET_PACKAGES_CMD);
-        uc.performAction(ActionType.BROADCAST, null, targetId);
-        uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
-        uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
+        broadcastBuffer[broadcastBufferLength++] = dc.MSG_ID_GET_PACKAGES_CMD;
+        broadcastBuffer[broadcastBufferLength++] = targetId;
+        broadcastBuffer[broadcastBufferLength++] = targetLoc.x;
+        broadcastBuffer[broadcastBufferLength++] = targetLoc.y;
     }
 
     public void sendEnemyHqLocMessage(Location loc) {
@@ -222,80 +268,80 @@ public class RemoteDatabase extends Database {
 
     public void sendDefenseCommand(int defenderId, Location targetLoc) {
         c.logger.log("sending defender %d to defend %s", defenderId, targetLoc);
-        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_DEFENSE_CMD);
-        uc.performAction(ActionType.BROADCAST, null, defenderId);
-        uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
-        uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
+        broadcastBuffer[broadcastBufferLength++] = dc.MSG_ID_DEFENSE_CMD;
+        broadcastBuffer[broadcastBufferLength++] = defenderId;
+        broadcastBuffer[broadcastBufferLength++] = targetLoc.x;
+        broadcastBuffer[broadcastBufferLength++] = targetLoc.y;
     }
 
     public void sendBuildDomeCommand(int builderId, Location targetLoc, int expansionId, Location[] path) {
         c.logger.log("Sending builder %d to build dome at %s", builderId, targetLoc);
-        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_BUILD_DOME_CMD);
-        uc.performAction(ActionType.BROADCAST, null, builderId);
-        uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
-        uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
-        uc.performAction(ActionType.BROADCAST, null, expansionId);
-        uc.performAction(ActionType.BROADCAST, null, path.length);
+        broadcastBuffer[broadcastBufferLength++] = dc.MSG_ID_BUILD_DOME_CMD;
+        broadcastBuffer[broadcastBufferLength++] = builderId;
+        broadcastBuffer[broadcastBufferLength++] = targetLoc.x;
+        broadcastBuffer[broadcastBufferLength++] = targetLoc.y;
+        broadcastBuffer[broadcastBufferLength++] = expansionId;
+        broadcastBuffer[broadcastBufferLength++] = path.length;
         for (int i = 0; i < path.length; i++) {
             Location source = path[i];
             if (i >= 1) {
                 uc.drawLineDebug(path[i], path[i-1], 0, 127, 127);
             }
-            uc.performAction(ActionType.BROADCAST, null, source.x);
-            uc.performAction(ActionType.BROADCAST, null, source.y);
+            broadcastBuffer[broadcastBufferLength++] = source.x;
+            broadcastBuffer[broadcastBufferLength++] = source.y;
         }
         uc.drawLineDebug(targetLoc, path[path.length - 1], 0, 255, 255);
         // padding
         if (path.length < dc.MAX_EXPANSION_DEPTH) {
             for (int i = path.length; i < dc.MAX_EXPANSION_DEPTH; i++) {
                 // won't be read
-                uc.performAction(ActionType.BROADCAST, null, 0);
-                uc.performAction(ActionType.BROADCAST, null, 0);
+                broadcastBuffer[broadcastBufferLength++] = 0;
+                broadcastBuffer[broadcastBufferLength++] = 0;
             }
         }
     }
 
     public void sendSettlementCommand(int settlerId, int companionId, Location targetLoc, Location[] path) {
         c.logger.log("Sending builder %d to help establish settlement at %s", settlerId, targetLoc);
-        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_SETTLEMENT_CMD);
-        uc.performAction(ActionType.BROADCAST, null, settlerId);
-        uc.performAction(ActionType.BROADCAST, null, companionId);
-        uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
-        uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
-        uc.performAction(ActionType.BROADCAST, null, path.length);
+        broadcastBuffer[broadcastBufferLength++] = dc.MSG_ID_SETTLEMENT_CMD;
+        broadcastBuffer[broadcastBufferLength++] = settlerId;
+        broadcastBuffer[broadcastBufferLength++] = companionId;
+        broadcastBuffer[broadcastBufferLength++] = targetLoc.x;
+        broadcastBuffer[broadcastBufferLength++] = targetLoc.y;
+        broadcastBuffer[broadcastBufferLength++] = path.length;
         for (int i = 0; i < path.length; i++) {
             Location source = path[i];
             if (i >= 1) {
                 uc.drawLineDebug(path[i], path[i-1], 0, 127, 127);
             }
-            uc.performAction(ActionType.BROADCAST, null, source.x);
-            uc.performAction(ActionType.BROADCAST, null, source.y);
+            broadcastBuffer[broadcastBufferLength++] = source.x;
+            broadcastBuffer[broadcastBufferLength++] = source.y;
         }
         uc.drawLineDebug(targetLoc, path[path.length - 1], 0, 255, 255);
         // padding
         if (path.length < dc.MAX_EXPANSION_DEPTH) {
             for (int i = path.length; i < dc.MAX_EXPANSION_DEPTH; i++) {
                 // won't be read
-                uc.performAction(ActionType.BROADCAST, null, 0);
-                uc.performAction(ActionType.BROADCAST, null, 0);
+                broadcastBuffer[broadcastBufferLength++] = 0;
+                broadcastBuffer[broadcastBufferLength++] = 0;
             }
         }
     }
 
     public void sendBuildHyperJumpCommand(int builderId, Location targetLoc) {
         c.logger.log("Sending builder %d to build hyper jump at %s", builderId, targetLoc);
-        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_BUILD_HYPER_JUMP_CMD);
-        uc.performAction(ActionType.BROADCAST, null, builderId);
-        uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
-        uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
+        broadcastBuffer[broadcastBufferLength++] = dc.MSG_ID_BUILD_HYPER_JUMP_CMD;
+        broadcastBuffer[broadcastBufferLength++] = builderId;
+        broadcastBuffer[broadcastBufferLength++] = targetLoc.x;
+        broadcastBuffer[broadcastBufferLength++] = targetLoc.y;
     }
 
     public void sendSuppressionCommand(int attackerId, Location targetLoc) {
         c.logger.log("Sending attacker %d to suppress %s", attackerId, targetLoc);
-        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_SUPPRESSION_CMD);
-        uc.performAction(ActionType.BROADCAST, null, attackerId);
-        uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
-        uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
+        broadcastBuffer[broadcastBufferLength++] = dc.MSG_ID_SUPPRESSION_CMD;
+        broadcastBuffer[broadcastBufferLength++] = attackerId;
+        broadcastBuffer[broadcastBufferLength++] = targetLoc.x;
+        broadcastBuffer[broadcastBufferLength++] = targetLoc.y;
     }
 
     public void sendDomeInquiry(Location targetLoc) {
@@ -304,59 +350,66 @@ public class RemoteDatabase extends Database {
         uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
     }
 
+    public void sendWorldMapperCommand(int mapperId, Location targetLoc) {
+        broadcastBuffer[broadcastBufferLength++] = dc.MSG_ID_WORLD_MAPPER_CMD;
+        broadcastBuffer[broadcastBufferLength++] = mapperId;
+        broadcastBuffer[broadcastBufferLength++] = targetLoc.x;
+        broadcastBuffer[broadcastBufferLength++] = targetLoc.y;
+    }
+
     public void sendSurveyCommand(int surveyor, Location targetLoc, int expansionId, Location[] path) {
         c.logger.log("send out surveyor %d to %s [expansion id: %d]", surveyor, targetLoc, expansionId);
-        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_SURVEY_CMD);
-        uc.performAction(ActionType.BROADCAST, null, surveyor);
-        uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
-        uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
-        uc.performAction(ActionType.BROADCAST, null, expansionId);
-        uc.performAction(ActionType.BROADCAST, null, path.length);
+        broadcastBuffer[broadcastBufferLength++] = dc.MSG_ID_SURVEY_CMD;
+        broadcastBuffer[broadcastBufferLength++] = surveyor;
+        broadcastBuffer[broadcastBufferLength++] = targetLoc.x;
+        broadcastBuffer[broadcastBufferLength++] = targetLoc.y;
+        broadcastBuffer[broadcastBufferLength++] = expansionId;
+        broadcastBuffer[broadcastBufferLength++] = path.length;
         for (int i = 0; i < path.length; i++) {
             Location source = path[i];
             if (i >= 1) {
                 uc.drawLineDebug(path[i], path[i-1], 0, 255, 255);
             }
-            uc.performAction(ActionType.BROADCAST, null, source.x);
-            uc.performAction(ActionType.BROADCAST, null, source.y);
+            broadcastBuffer[broadcastBufferLength++] = source.x;
+            broadcastBuffer[broadcastBufferLength++] = source.y;
         }
             uc.drawLineDebug(targetLoc, path[path.length - 1], 0, 255, 255);
         // padding
         if (path.length < dc.MAX_EXPANSION_DEPTH) {
             for (int i = path.length; i < dc.MAX_EXPANSION_DEPTH; i++) {
                 // won't be read
-                uc.performAction(ActionType.BROADCAST, null, 0);
-                uc.performAction(ActionType.BROADCAST, null, 0);
+                broadcastBuffer[broadcastBufferLength++] = 0;
+                broadcastBuffer[broadcastBufferLength++] = 0;
             }
         }
     }
 
     public void sendExpansionCommand(int workerId, Location targetLoc, int state, int expansionId, Location[] path, Location possibleNext) {
         c.logger.log("send out expansion worker %d to %s [expansion id: %d]", workerId, targetLoc, expansionId);
-        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_EXPANSION);
-        uc.performAction(ActionType.BROADCAST, null, workerId);
-        uc.performAction(ActionType.BROADCAST, null, targetLoc.x);
-        uc.performAction(ActionType.BROADCAST, null, targetLoc.y);
-        uc.performAction(ActionType.BROADCAST, null, state);
-        uc.performAction(ActionType.BROADCAST, null, expansionId);
+        broadcastBuffer[broadcastBufferLength++] = dc.MSG_ID_EXPANSION;
+        broadcastBuffer[broadcastBufferLength++] = workerId;
+        broadcastBuffer[broadcastBufferLength++] = targetLoc.x;
+        broadcastBuffer[broadcastBufferLength++] = targetLoc.y;
+        broadcastBuffer[broadcastBufferLength++] = state;
+        broadcastBuffer[broadcastBufferLength++] = expansionId;
         if (possibleNext != null) {
-            uc.performAction(ActionType.BROADCAST, null, possibleNext.x);
-            uc.performAction(ActionType.BROADCAST, null, possibleNext.y);
+            broadcastBuffer[broadcastBufferLength++] = possibleNext.x;
+            broadcastBuffer[broadcastBufferLength++] = possibleNext.y;
         } else {
-            uc.performAction(ActionType.BROADCAST, null, dc.INVALID_LOCATION.x);
-            uc.performAction(ActionType.BROADCAST, null, dc.INVALID_LOCATION.y);
+            broadcastBuffer[broadcastBufferLength++] = dc.INVALID_LOCATION.x;
+            broadcastBuffer[broadcastBufferLength++] = dc.INVALID_LOCATION.y;
         }
-        uc.performAction(ActionType.BROADCAST, null, path.length);
+        broadcastBuffer[broadcastBufferLength++] = path.length;
         for (Location source : path) {
-            uc.performAction(ActionType.BROADCAST, null, source.x);
-            uc.performAction(ActionType.BROADCAST, null, source.y);
+            broadcastBuffer[broadcastBufferLength++] = source.x;
+            broadcastBuffer[broadcastBufferLength++] = source.y;
         }
         // padding
         if (path.length < dc.MAX_EXPANSION_DEPTH) {
             for (int i = path.length; i < dc.MAX_EXPANSION_DEPTH; i++) {
                 // won't be read
-                uc.performAction(ActionType.BROADCAST, null, 0);
-                uc.performAction(ActionType.BROADCAST, null, 0);
+                broadcastBuffer[broadcastBufferLength++] = 0;
+                broadcastBuffer[broadcastBufferLength++] = 0;
             }
         }
     }
@@ -378,6 +431,58 @@ public class RemoteDatabase extends Database {
         }
     }
 
+    public void sendWorldObstacles(Location[] obstacles, int begin, int length) {
+        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_WORLD_OBSTACLES);
+        uc.performAction(ActionType.BROADCAST, null, length);
+        for (int i = begin; i < begin + length; i++) {
+            uc.performAction(ActionType.BROADCAST, null, obstacles[i].x);
+            uc.performAction(ActionType.BROADCAST, null, obstacles[i].y);
+        }
+    }
+
+    public void sendWorldObstaclesFromBase(Location[] obstacles) {
+        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_WORLD_OBSTACLES);
+        uc.performAction(ActionType.BROADCAST, null, obstacles.length);
+        for (Location obstacle : obstacles) {
+            uc.performAction(ActionType.BROADCAST, null, obstacle.x);
+            uc.performAction(ActionType.BROADCAST, null, obstacle.y);
+        }
+    }
+
+    public void sendWorldObstaclesFromBase(FastLocIntMap map) {
+        int obstacleCount = 0;
+        for (Iterator<Location> it = map.getIterator(); it.hasNext(); ) {
+            Location loc = it.next();
+            if (map.getVal(loc) != dc.TILE_OBSTACLE) {
+                continue;
+            }
+            obstacleCount++;
+        }
+        uc.performAction(ActionType.BROADCAST, null, dc.MSG_ID_WORLD_OBSTACLES);
+        uc.performAction(ActionType.BROADCAST, null, obstacleCount);
+        for (Iterator<Location> it = map.getIterator(); it.hasNext(); ) {
+            Location loc = it.next();
+            if (map.getVal(loc) != dc.TILE_OBSTACLE) {
+                continue;
+            }
+            uc.performAction(ActionType.BROADCAST, null, loc.x);
+            uc.performAction(ActionType.BROADCAST, null, loc.y);
+        }
+    }
+
+    public void sendPath(int targetId, int pathIdx) {
+        broadcastBuffer[broadcastBufferLength++] = dc.MSG_ID_PATH;
+        int length = c.ldb.knownPathsLength[pathIdx];
+        broadcastBuffer[broadcastBufferLength++] = length;
+        broadcastBuffer[broadcastBufferLength++] = targetId;
+        Location[] path = c.ldb.knownPaths[pathIdx];
+        // reverse the path for astronaut convenience
+        for (int i = length - 1; i >= 0; i--) {
+            broadcastBuffer[broadcastBufferLength++] = path[i].x;
+            broadcastBuffer[broadcastBufferLength++] = path[i].y;
+        }
+    }
+
     private int getStructureExpansionId() {
         return baseIdx * dc.EXPANSION_SIZE;
     }
@@ -388,7 +493,12 @@ public class RemoteDatabase extends Database {
         while (b != null) {
             int fullMsg = b.getMessage();
             int msgId = getMsgId(fullMsg);
-            if (msgId == dc.MSG_ID_SYMMETRIC_SEEKER_CMD) {
+            if (msgId == dc.MSG_ID_HQ_SETUP_BROADCAST_MARKER) {
+                int length = uc.pollBroadcast().getMessage();
+                if (uc.isStructure() || !uc.getAstronautInfo().isBeingConstructed()) {
+                    uc.eraseBroadcastBuffer(length);
+                }
+            } else if (msgId == dc.MSG_ID_SYMMETRIC_SEEKER_CMD) {
                 if (seekSymmetryCommandReceiver != null) {
                     seekSymmetryCommandReceiver.receive(fullMsg);
                 } else {
@@ -484,10 +594,22 @@ public class RemoteDatabase extends Database {
             } else if (msgId == dc.MSG_ID_SYMMETRIC_SEEKER_COMPLETE) {
                 if (seekSymmetryCompleteReceiver != null) {
                     seekSymmetryCompleteReceiver.receive(fullMsg);
-                }
+                    // secondary receivers should not read further broadcasts
+                    if (seekSymmetryCompleteReceiver2 != null) {
+                        seekSymmetryCompleteReceiver2.receive(-1);
+                    }
+                } // size = 1
             } else if (msgId == dc.MSG_ID_SUPPRESSION_CMD) {
                 if (suppressionCommandReceiver != null) {
                     suppressionCommandReceiver.receive(fullMsg);
+                } else {
+                    uc.eraseBroadcastBuffer(dc.MSG_SIZE_SUPPRESSION_CMD); // ID wasn't read
+                }
+            } else if (msgId == dc.MSG_ID_WORLD_MAPPER_CMD) {
+                if (worldMapperCommandReceiver != null) {
+                    worldMapperCommandReceiver.receive(fullMsg);
+                } else {
+                    uc.eraseBroadcastBuffer(dc.MSG_SIZE_WORLD_MAPPER_CMD); // ID wasn't read
                 }
             } else if (msgId == dc.MSG_ID_SETTLEMENT_CMD) {
                 if (settlementCommandReceiver != null) {
@@ -588,8 +710,24 @@ public class RemoteDatabase extends Database {
             } else if (msgId == dc.MSG_ID_NEW_SETTLEMENT) {
                 if (newSettlementReceiver != null) {
                     newSettlementReceiver.receive(fullMsg);
+                    if (newSettlementReceiver2 != null) {
+                        newSettlementReceiver2.receive(-1);
+                    }
                 } else {
                     uc.eraseBroadcastBuffer(dc.MSG_SIZE_NEW_SETTLEMENT);
+                }
+            } else if (msgId == dc.MSG_ID_WORLD_OBSTACLES) {
+                if (worldObstacleReceiver != null) {
+                    worldObstacleReceiver.receive(fullMsg);
+                } else {
+                    uc.eraseBroadcastBuffer(uc.pollBroadcast().getMessage() * 2); // first message is the length
+                }
+            } else if (msgId == dc.MSG_ID_PATH) {
+                if (pathReceiver != null) {
+                    pathReceiver.receive(fullMsg);
+                } else {
+                    // first message is the length, second message is the target ID
+                    uc.eraseBroadcastBuffer((uc.pollBroadcast().getMessage() * 2) + 1);
                 }
             } else if (msgId == dc.MSG_ID_ALERT) {
                 if (subscribeAlert) {
@@ -854,6 +992,14 @@ public class RemoteDatabase extends Database {
             return dc.MSG_ID_NEW_SETTLEMENT;
         } else if (broadcasted == dc.MSG_ID_SUPPRESSOR_HEARTBEAT) {
             return dc.MSG_ID_SUPPRESSOR_HEARTBEAT;
+        } else if (broadcasted == dc.MSG_ID_WORLD_MAPPER_CMD) {
+            return dc.MSG_ID_WORLD_MAPPER_CMD;
+        } else if (broadcasted == dc.MSG_ID_WORLD_OBSTACLES) {
+            return dc.MSG_ID_WORLD_OBSTACLES;
+        } else if (broadcasted == dc.MSG_ID_PATH) {
+            return dc.MSG_ID_PATH;
+        } else if (broadcasted == dc.MSG_ID_HQ_SETUP_BROADCAST_MARKER) {
+            return dc.MSG_ID_HQ_SETUP_BROADCAST_MARKER;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_SURVEY_COMPLETE_GOOD) {
             return dc.MSG_ID_SURVEY_COMPLETE_GOOD;
         } else if ((broadcasted & dc.MSG_ID_MASKER) == dc.MSG_ID_MASK_SURVEY_COMPLETE_BAD) {

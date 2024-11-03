@@ -208,7 +208,7 @@ public class EnlistSuppressorsTask extends Task {
         int enlistedCount = 0;
         for (Direction dir: Direction.values()) {
             if (c.uc.canEnlistAstronaut(dir, givenOxygen, null)) {
-                c.enlistAstronaut(dir, givenOxygen, null);
+                c.enlistAstronaut(dir, givenOxygen, null, enemyHq);
                 int enlistId = uc.senseAstronaut(c.loc.add(dir)).getID();
                 suppressors.add(enlistId, 1);
                 rdb.sendSuppressionCommand(enlistId, enemyHq);

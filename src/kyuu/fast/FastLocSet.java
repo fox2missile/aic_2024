@@ -2,6 +2,9 @@ package kyuu.fast;
 
 
 import aic2024.user.*;
+
+import java.util.Iterator;
+
 public class FastLocSet {
     public StringBuilder keys;
     public int size;
@@ -86,5 +89,22 @@ public class FastLocSet {
             locs[i / 3] = new Location((int) keys.charAt(i), (int) keys.charAt(i + 1));
         }
         return locs;
+    }
+
+    public Iterator<Location> getIterator() {
+        return new Iterator<Location>() {
+            int i = 1;
+            @Override
+            public boolean hasNext() {
+                return i < keys.length();
+            }
+
+            @Override
+            public Location next() {
+                Location ret = new Location((int) keys.charAt(i), (int) keys.charAt(i + 1));
+                i += 3;
+                return ret;
+            }
+        };
     }
 }

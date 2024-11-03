@@ -61,7 +61,7 @@ public class RetrievePackageTask extends Task {
                 100, //SETTLEMENT
                 -10, //DOME
                 -10, //HYPERJUMP
-                -10, //RADIO
+                10, //RADIO
                 200, //REINFORCED_SUIT
                 0, //SURVIVAL_KIT
                 200, //OXYGEN_TANK

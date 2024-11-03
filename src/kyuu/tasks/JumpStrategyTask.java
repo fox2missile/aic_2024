@@ -166,7 +166,7 @@ public class JumpStrategyTask extends Task {
             // first builder or previous builder failed
             for (Direction dir: c.getFirstDirs(c.loc.directionTo(needJumps[k]))) {
                 if (uc.canEnlistAstronaut(dir, 10, CarePackage.HYPERJUMP)) {
-                    c.enlistAstronaut(dir, 10, CarePackage.HYPERJUMP);
+                    c.enlistAstronaut(dir, 10, CarePackage.HYPERJUMP, needJumps[k]);
                     int enlistId = uc.senseAstronaut(c.loc.add(dir)).getID();
                     rdb.sendBuildHyperJumpCommand(enlistId, needJumps[k]);
                     nextBuild = (k + 1) % needJumpsLength;
@@ -183,7 +183,7 @@ public class JumpStrategyTask extends Task {
                 return;
             }
             if (uc.canEnlistAstronaut(dir, 10, CarePackage.HYPERJUMP)) {
-                c.enlistAstronaut(dir, 10, CarePackage.HYPERJUMP);
+                c.enlistAstronaut(dir, 10, CarePackage.HYPERJUMP, null);
                 int enlistId = uc.senseAstronaut(c.loc.add(dir)).getID();
                 rdb.sendBuildHyperJumpCommand(enlistId, c.loc.add(dir));
             }

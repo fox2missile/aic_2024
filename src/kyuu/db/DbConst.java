@@ -6,9 +6,21 @@ import aic2024.user.Location;
 
 public class DbConst {
 
+    public final int TILE_UNKNOWN = -1;
+    public final int TILE_LAND = 1;
+    public final int TILE_OBSTACLE = 2;
+    public final int TILE_TERRAFORMED = 3;
+    public final int TILE_DOMED = 5;
+    public final int TILE_HYPER_JUMP = 7;
+    // If tile > TILE_HYPER_JUMP, then it is hyper jump landing.
+    // Hyper jump landing information is encoded as {other_tile} * TILE_HYPER_JUMP_LANDING)
+    public final int TILE_HYPER_JUMP_LANDING = 11;
+
     public final int MAX_MAP_OFFSET = 1000;
 
     public final int MAX_BASES = 15;
+
+    public final int MAX_PATH_LENGTH = 150;
 
     // sector properties: constants
     public final int SECTOR_SQUARE_SIZE = 5;
@@ -75,6 +87,9 @@ public class DbConst {
 
     public final int MSG_SIZE_INQUIRE_DOME = 2;
     // {
+
+    public final int MSG_SIZE_WORLD_MAPPER_CMD = 3;
+    // {mapper id, x, y}
 
     public final int MSG_SIZE_SUPPRESSION_CMD = 3;
     // {suppressor id, x, y}
@@ -161,5 +176,8 @@ public class DbConst {
     public final int MSG_ID_NEW_SETTLEMENT = MSG_ID_BEGIN - 26;
     public final int MSG_ID_GET_PACKAGES_FAILED = MSG_ID_BEGIN - 27;
     public final int MSG_ID_SUPPRESSOR_HEARTBEAT = MSG_ID_BEGIN - 28;
-
+    public final int MSG_ID_WORLD_MAPPER_CMD = MSG_ID_BEGIN - 29;
+    public final int MSG_ID_WORLD_OBSTACLES = MSG_ID_BEGIN - 30;
+    public final int MSG_ID_PATH = MSG_ID_BEGIN - 31;
+    public final int MSG_ID_HQ_SETUP_BROADCAST_MARKER = MSG_ID_BEGIN - 32;
 }

@@ -104,7 +104,7 @@ public class SymmetrySeekerAssignerTask extends Task {
         int givenOxygen = 50 + (10 * symmetrySeekAttempts[symIdx]);
         for (Direction d: c.getFirstDirs(c.loc.directionTo(sym))) {
             if (uc.canEnlistAstronaut(d, givenOxygen, pax)) {
-                c.enlistAstronaut(d, givenOxygen, pax);
+                c.enlistAstronaut(d, givenOxygen, pax, sym);
                 AstronautInfo a = uc.senseAstronaut(c.loc.add(d));
                 rdb.sendSymmetricSeekerCommand(a.getID(), sym);
                 symmetryAssigned[symIdx] = true;
@@ -240,6 +240,7 @@ public class SymmetrySeekerAssignerTask extends Task {
     }
 
     private void handleSymmetryFound(int symmetryId) {
+        ldb.symmetryFound = true;
         c.logger.log("Symmetry found! horizontalSymmetryPossible %s | verticalSymmetryPossible %s | rotationalSymmetryPossible %s",
                 ldb.horizontalSymmetryPossible, ldb.verticalSymmetryPossible, ldb.rotationalSymmetryPossible);
 

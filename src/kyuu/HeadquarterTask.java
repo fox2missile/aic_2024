@@ -28,6 +28,7 @@ public class HeadquarterTask extends Task {
     Task jumpStrategyTask;
 
     Task settlementStrategyTask;
+    Task pathPlannerTask;
 
     float prevOxygen;
 
@@ -45,6 +46,7 @@ public class HeadquarterTask extends Task {
         symmetrySeekerAssignerTask = new SymmetrySeekerAssignerTask(c);
         settlementStrategyTask = new SettlementStrategyTask(c);
         jumpStrategyTask = new JumpStrategyTask(c);
+        pathPlannerTask = new PathPlannerTask(c);
         prevOxygen = -1;
         rdb.newSettlementReceiver = (int __) -> {
             BroadcastInfo idxBroadcast = uc.pollBroadcast();
@@ -92,6 +94,7 @@ public class HeadquarterTask extends Task {
         ldb.minReserveOxygen = 0;
         ldb.minReserveEnlistSlot = 0;
         ldb.resetAssignedThisRound();
+        ldb.recentEnlistsLength = 0;
 
         if (prevOxygen != -1) {
             ldb.oxygenProductionRate = uc.getStructureInfo().getOxygen() - prevOxygen;
@@ -112,10 +115,13 @@ public class HeadquarterTask extends Task {
             rdb.introduceHq();
             defenseAssignerTask.run();
             expansionTask = new ExpansionTask(c);
+            rdb.flushBroadcastBuffer();
         } else if (uc.getRound() == 2) {
             symmetrySeekerAssignerTask.initSymmetryCandidates();
             defenseAssignerTask.run();
+            rdb.flushBroadcastBuffer();
         } else  {
+            rdb.sendBaseHeartbeat();
             defenseAssignerTask.run();
             Message msg = rdb.retrieveNextMessage();
             while (msg != null) {
@@ -131,7 +137,6 @@ public class HeadquarterTask extends Task {
             if (rdb.enemyHqSize == 0) {
                 symmetrySeekerAssignerTask.run();
             }
-            rdb.sendBaseHeartbeat();
             broadcastEnemyHq();
             settlementStrategyTask.run();
             enlistAttackersTask.run();
@@ -141,6 +146,8 @@ public class HeadquarterTask extends Task {
             jumpStrategyTask.run();
 
             enlistSuppressorsTask.run();
+            rdb.flushBroadcastBuffer();
+            pathPlannerTask.run();
 
 //            for (Iterator<Location> it = rdb.recentDangerSectors.getBackIterator(); it.hasNext(); ) {
 //                Location sector = it.next();

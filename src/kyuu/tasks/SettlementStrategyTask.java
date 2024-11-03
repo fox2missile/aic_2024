@@ -45,7 +45,7 @@ public class SettlementStrategyTask extends Task {
         // the settlement package
         for (Direction dir: c.getFirstDirs(c.loc.directionTo(settlementLoc))) {
             if (uc.canEnlistAstronaut(dir, deliveryCost, CarePackage.SETTLEMENT)) {
-                uc.enlistAstronaut(dir, deliveryCost, CarePackage.SETTLEMENT);
+                c.enlistAstronaut(dir, deliveryCost, CarePackage.SETTLEMENT, settlementLoc, edge.ex.expansionTree);
                 builderId = uc.senseAstronaut(c.loc.add(dir)).getID();
                 break;
             }
@@ -55,7 +55,7 @@ public class SettlementStrategyTask extends Task {
         CarePackage care = uc.getStructureInfo().getCarePackagesOfType(CarePackage.SURVIVAL_KIT) > 0 ? CarePackage.SURVIVAL_KIT : null;
         for (Direction dir: c.getFirstDirs(c.loc.directionTo(settlementLoc))) {
             if (uc.canEnlistAstronaut(dir, deliveryCost + 500, care)) {
-                uc.enlistAstronaut(dir, deliveryCost + 500, care);
+                c.enlistAstronaut(dir, deliveryCost + 500, care, settlementLoc, edge.ex.expansionTree);
                 oxygenCarrierId = uc.senseAstronaut(c.loc.add(dir)).getID();
                 break;
             }

@@ -1,8 +1,6 @@
 package kyuu.tasks;
 
-import aic2024.user.ActionType;
-import aic2024.user.AstronautInfo;
-import aic2024.user.Direction;
+import aic2024.user.*;
 import kyuu.C;
 import kyuu.Vector2D;
 import kyuu.message.SettlementCommand;
@@ -22,7 +20,7 @@ public class SettlerBuilderTask extends SettlerTask {
                 c.destination = cmd.target;
             }
 
-            if (uc.senseStructures(c.visionRange, c.team).length == 0) {
+            if (!uc.canSenseLocation(c.spawnLoc)) {
                 deployed = true;
             }
         }
@@ -71,11 +69,28 @@ public class SettlerBuilderTask extends SettlerTask {
     }
 
     private void buildSettlementNow() {
-        for (Direction dir: c.allDirsZero) {
-            if (uc.canPerformAction(ActionType.BUILD_SETTLEMENT, dir, 1)) {
-                uc.performAction(ActionType.BUILD_SETTLEMENT, dir, 1);
-                return;
+        int bestScore = -1;
+        Direction bestDir = null;
+        for (Direction dir: c.allDirs) {
+            if (!uc.canPerformAction(ActionType.BUILD_SETTLEMENT, dir, 1)) {
+                continue;
+            }
+
+            int score = 0;
+            for (Direction checkDir: c.allDirs) {
+                Location checkLoc = c.loc.add(dir).add(checkDir);
+                if (!uc.isOutOfMap(checkLoc) && uc.canSenseLocation(checkLoc) && uc.senseTileType(checkLoc) != TileType.WATER && uc.senseStructure(checkLoc) == null) {
+                    score++;
+                }
+            }
+            if (score > bestScore) {
+                bestScore = score;
+                bestDir = dir;
             }
         }
+        if (bestDir != null && uc.canPerformAction(ActionType.BUILD_SETTLEMENT, bestDir, 1)) {
+            uc.performAction(ActionType.BUILD_SETTLEMENT, bestDir, 1);
+        }
+
     }
 }

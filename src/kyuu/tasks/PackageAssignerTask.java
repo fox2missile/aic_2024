@@ -15,11 +15,11 @@ public class PackageAssignerTask extends Task {
 
     final int[] defaultScores = {
             100, //SETTLEMENT
-            20, //DOME
-            40, //HYPERJUMP
-            -1, //RADIO
+            40, //DOME
+            80, //HYPERJUMP
+            40, //RADIO
             200, //REINFORCED_SUIT
-            50, //SURVIVAL_KIT
+            60, //SURVIVAL_KIT
             200, //OXYGEN_TANK
             400, //PLANTS
     };
@@ -69,6 +69,9 @@ public class PackageAssignerTask extends Task {
             if (uc.getStructureInfo().getCarePackagesOfType(CarePackage.RADIO) >= 5) {
                 priorityBoostMap[CarePackage.RADIO.ordinal()] = -1000;
             }
+//            else if (uc.getStructureInfo().getOxygen() > 200 && ldb.oxygenProductionRate >= 10) {
+//                priorityBoostMap[CarePackage.RADIO.ordinal()] = 40;
+//            }
             if (uc.getStructureInfo().getCarePackagesOfType(CarePackage.REINFORCED_SUIT) > 30) {
                 priorityBoostMap[CarePackage.REINFORCED_SUIT.ordinal()] = -100;
                 priorityBoostMap[CarePackage.OXYGEN_TANK.ordinal()] = 100;
@@ -124,7 +127,7 @@ public class PackageAssignerTask extends Task {
             }
             for (Direction dir: c.getFirstDirs(dirTarget)) {
                 if (uc.canEnlistAstronaut(dir, retrieveCost, null)) {
-                    c.enlistAstronaut(dir, retrieveCost, null);
+                    c.enlistAstronaut(dir, retrieveCost, null, bestPax.getLocation());
                     int enlistedId = uc.senseAstronaut(c.loc.add(dir)).getID();
                     rdb.sendGetPackagesCommand(enlistedId, bestPax.getLocation());
                     Location paxLocation = bestPax.getLocation();

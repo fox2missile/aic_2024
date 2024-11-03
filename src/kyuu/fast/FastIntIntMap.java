@@ -69,4 +69,15 @@ public class FastIntIntMap {
         }
         return keys;
     }
+
+    public static void main(String[] args) {
+        FastIntIntMap map = new FastIntIntMap();
+        map.addReplace(1, 3);
+        map.addReplace(3, 5);
+        map.addReplace(3, 6);
+        map.addReplace(6, 7);
+        for (int i = 0; i <= 6; i++) {
+            System.out.printf("i: %d | val: %d\n", i, map.getVal(i));
+        }
+    }
 }

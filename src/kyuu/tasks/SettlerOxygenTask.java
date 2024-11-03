@@ -23,7 +23,7 @@ public class SettlerOxygenTask extends SettlerTask {
                 c.destination = cmd.target;
             }
 
-            if (uc.senseStructures(c.actionRange, c.team).length == 0) {
+            if (!uc.canSenseLocation(c.spawnLoc)) {
                 deployed = true;
             }
         }

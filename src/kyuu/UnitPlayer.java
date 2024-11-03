@@ -16,6 +16,7 @@ public class UnitPlayer {
 
 		while (true) {
 			c.loc = uc.getLocation();
+			c.currentRound = uc.getRound();
 			try {
 				strategy.run();
 			} catch (Exception e) {
@@ -25,7 +26,12 @@ public class UnitPlayer {
 					throw e;
 				}
 			}
-			uc.yield(); //End of turn
+			if (c.currentRound == uc.getRound()) {
+				// yield if still the same round
+				uc.yield(); //End of turn
+			} else {
+				c.logger.log("bytecode overflow!");
+			}
 		}
 	}
 }

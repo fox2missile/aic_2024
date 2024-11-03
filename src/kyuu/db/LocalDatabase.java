@@ -14,6 +14,7 @@ public class LocalDatabase extends Database {
 
     FastLocStack pendingExploreStack;
 
+    public boolean symmetryFound = false;
     public boolean horizontalSymmetryPossible = true;
     public boolean verticalSymmetryPossible = true;
     public boolean rotationalSymmetryPossible = true;
@@ -38,6 +39,17 @@ public class LocalDatabase extends Database {
     public int expansionsDepth2Size;
     public float oxygenProductionRate;
 
+    // Reversed, first loc is destination.
+    // Every destination is reserved 8 paths.
+    // The astronauts will reverse it.
+    public Location[][] knownPaths;
+    public int[] knownPathsLength;
+    public int knownDestinations;
+    FastLocIntMap destinationPathIdx;
+
+    public EnlistDestination[] recentEnlists;
+    public int recentEnlistsLength;
+
     public LocalDatabase(C c) {
         super(c);
         this.sectorStatusMap = new FastLocIntMap();
@@ -46,6 +58,68 @@ public class LocalDatabase extends Database {
         this.pendingExploreStack = new FastLocStack(20);
         this.neededHyperJumps = 0;
         this.oxygenProductionRate = uc.isStructure() && uc.getStructureInfo().getType() == StructureType.HQ ? 5 : 0;
+        knownPaths = new Location[200][];
+        knownPathsLength = new int[200];
+        knownDestinations = 0;
+        destinationPathIdx = new FastLocIntMap();
+        recentEnlists = new EnlistDestination[c.allDirs.length];
+        recentEnlistsLength = 0;
+    }
+
+    public int allocatePathBuffer(Location destination, Location start) {
+        int destPathIdx = destinationPathIdx.getVal(destination);
+        if (destPathIdx == -1) {
+            destPathIdx = knownDestinations * c.s.defaultAvailableEnlistSlot;
+            knownDestinations++;
+            destinationPathIdx.add(destination, destPathIdx);
+        }
+        for (int i = destPathIdx; i < destPathIdx + c.s.defaultAvailableEnlistSlot; i++) {
+            if (knownPaths[i] == null || knownPaths[i][knownPathsLength[i] - 1].equals(start)) {
+                knownPaths[i] = new Location[dc.MAX_PATH_LENGTH];
+                return i;
+            }
+        }
+        // impossible
+        throw new IllegalStateException("Allocate path buffer bugged");
+    }
+
+    public int getPath(Location start, Location destination, boolean approxDestination) {
+        int nearestDestDist = Integer.MAX_VALUE;
+        Location nearestDest = null;
+        int maxDestDist = approxDestination ? 30 * 30 : 8;
+        for (Iterator<Location> it = destinationPathIdx.getIterator(); it.hasNext(); ) {
+            Location knownDest = it.next();
+            int dist = knownDest.distanceSquared(destination);
+            if (dist <= nearestDestDist && dist <= maxDestDist) {
+                nearestDest = knownDest;
+                nearestDestDist = dist;
+            }
+        }
+        if (nearestDest == null) {
+            return -1;
+        }
+        int destPathIdx = destinationPathIdx.getVal(nearestDest);
+        int nearestStartDist = Integer.MAX_VALUE;
+        int bestPathIdx = -1;
+        for (int i = destPathIdx; i < destPathIdx + c.s.defaultAvailableEnlistSlot; i++) {
+            if (knownPaths[i] == null) {
+                break;
+            }
+            Location checkStart = knownPaths[i][knownPathsLength[i] - 1];
+            int dist = checkStart.distanceSquared(start);
+            if (dist <= nearestStartDist && dist <= 18) {
+                nearestStartDist = dist;
+                bestPathIdx = i;
+            }
+        }
+        if (bestPathIdx != -1) {
+            return bestPathIdx;
+        }
+        return -1;
+    }
+
+    public int getPath(Location start, Location destination) {
+        return getPath(start, destination, false);
     }
 
     public void allocateExpansionData() {

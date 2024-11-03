@@ -240,7 +240,7 @@ public class ExpansionTask extends Task {
                 ldb.minReserveOxygen += surveyCost;
                 for (Direction dir: c.getFirstDirs(c.allDirs[i])) {
                     if (uc.canEnlistAstronaut(dir, surveyCost, null)) {
-                        c.enlistAstronaut(dir, surveyCost, null);
+                        c.enlistAstronaut(dir, surveyCost, null, rdb.expansionSites[ex.id][i], ex.expansionTree);
                         rdb.sendSurveyCommand(
                                 uc.senseAstronaut(c.loc.add(dir)).getID(),
                                 rdb.expansionSites[ex.id][i], ex.id,
@@ -412,7 +412,7 @@ public class ExpansionTask extends Task {
                     }
                 }
 
-                c.enlistAstronaut(dir, givenOxygen, carePackage);
+                c.enlistAstronaut(dir, givenOxygen, carePackage, rdb.expansionSites[ex.id][i], ex.expansionTree);
                 int enlistedId = uc.senseAstronaut(c.loc.add(dir)).getID();
                 rdb.sendExpansionCommand(enlistedId, rdb.expansionSites[ex.id][i], rdb.expansionStates[ex.id][i], ex.id, ex.expansionTree, possibleNextExpansion);
                 ex.expansionWorkers[i] = enlistedId;
@@ -603,7 +603,7 @@ public class ExpansionTask extends Task {
         ldb.minReserveOxygen += cost;
         for (Direction dir: c.getFirstDirs(c.allDirs[dirIdx])) {
             if (uc.canEnlistAstronaut(dir, cost, CarePackage.DOME)) {
-                c.enlistAstronaut(dir, cost, CarePackage.DOME);
+                c.enlistAstronaut(dir, cost, CarePackage.DOME, buildLoc, expansion.expansionTree);
                 int enlistId = uc.senseAstronaut(c.loc.add(dir)).getID();
                 rdb.sendBuildDomeCommand(enlistId, buildLoc, expansion.id, expansion.expansionTree);
                 rdb.expansionStates[expansion.id][dirIdx] = dc.EXPANSION_STATE_BUILDING_DOME;

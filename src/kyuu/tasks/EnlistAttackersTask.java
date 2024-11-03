@@ -66,7 +66,7 @@ public class EnlistAttackersTask extends Task {
         c.logger.log("enlisting attackers with cost %d", singleAtkCost);
         for (Direction dir: c.getFirstDirs(c.loc.directionTo(targetHq))) {
             if (c.uc.canEnlistAstronaut(dir, singleAtkCost, CarePackage.REINFORCED_SUIT)) {
-                c.enlistAstronaut(dir, singleAtkCost, CarePackage.REINFORCED_SUIT);
+                c.enlistAstronaut(dir, singleAtkCost, CarePackage.REINFORCED_SUIT, targetHq);
                 ldb.minReserveOxygen -= singleAtkCost;
             }
         }

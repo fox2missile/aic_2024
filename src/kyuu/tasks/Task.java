@@ -13,12 +13,19 @@ public abstract class Task {
     protected RemoteDatabase rdb;
     protected DbConst dc;
     protected UnitController uc;
+    public int priority;
+    public int progress;
+
     public Task(C c) {
         this.c = c;
-        this.uc = c.uc;
-        this.ldb = c.ldb;
-        this.dc = c.dc;
-        this.rdb = c.rdb;
+        if (c != null) {
+            this.uc = c.uc;
+            this.ldb = c.ldb;
+            this.dc = c.dc;
+            this.rdb = c.rdb;
+        }
+        this.priority = 0;
+        this.progress = 0;
     }
     public abstract void run();
 

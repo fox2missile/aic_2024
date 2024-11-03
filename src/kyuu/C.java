@@ -2,6 +2,7 @@ package kyuu;
 
 import aic2024.user.*;
 import kyuu.db.DbConst;
+import kyuu.db.EnlistDestination;
 import kyuu.db.LocalDatabase;
 import kyuu.db.RemoteDatabase;
 import kyuu.log.Logger;
@@ -10,11 +11,12 @@ import kyuu.log.LoggerStandard;
 
 // C stands for Context
 public class C {
-    public final boolean DEBUG = false; // todo: better boom
+    public final boolean DEBUG = true; // todo: better boom
     public UnitController uc;
     public Team team;
     public Team opponent;
     public Logger logger;
+    public Location spawnLoc;
     public Logger loggerAlways;
     public Location destination = null;
     public int seed;
@@ -26,6 +28,7 @@ public class C {
     public final int visionRangeStep;
     public final float actionRange;
     public Location loc;
+    public int currentRound;
     public final Location startLoc;
     public final int id;
     public Scanner s;
@@ -113,13 +116,33 @@ public class C {
         steps++;
     }
 
-    public int enlistAstronaut(Direction dir, int oxygen, CarePackage pax) {
+    public int enlistAstronaut(Direction dir, int oxygen, CarePackage pax, Location destination, Location[] summarizedPath, boolean approxDestination) {
         uc.enlistAstronaut(dir, oxygen, pax);
         ldb.availableEnlistSlot--;
-        int enlistId = uc.senseAstronaut(loc.add(dir)).getID();
+        Location start = loc.add(dir);
+        int enlistId = uc.senseAstronaut(start).getID();
         rdb.unitSpawnRounds.addReplace(enlistId, uc.getRound() + 5);
+        ldb.recentEnlists[ldb.recentEnlistsLength++] = new EnlistDestination(enlistId, start, destination, summarizedPath, approxDestination);
         return enlistId;
     }
+
+    public int enlistAstronaut(Direction dir, int oxygen, CarePackage pax, Location destination, Location[] summarizedPath) {
+        return enlistAstronaut(dir, oxygen, pax, destination, summarizedPath, false);
+    }
+
+    public int enlistAstronaut(Direction dir, int oxygen, CarePackage pax, Location destination) {
+        return enlistAstronaut(dir, oxygen, pax, destination, null, false);
+    }
+
+    public int enlistAstronaut(Direction dir, int oxygen, CarePackage pax, Location destination, boolean approxDestination) {
+        return enlistAstronaut(dir, oxygen, pax, destination, null, approxDestination);
+    }
+
+    public int enlistAstronaut(Direction dir, int oxygen, CarePackage pax) {
+        return enlistAstronaut(dir, oxygen, pax, null, null, false);
+    }
+
+
 
     public Location getSectorOrigin(Location sector) {
         return new Location(sector.x * dc.SECTOR_SQUARE_SIZE, sector.y * dc.SECTOR_SQUARE_SIZE);
@@ -177,6 +200,7 @@ public class C {
         }
 
         id = unitController.getID();
+        spawnLoc = unitController.getLocation();
 
         if (id % 4 == 0) {
             this.fourDirs = new Direction[]{
@@ -302,5 +326,9 @@ public class C {
 
     public Location mirrorRotational(Location loc) {
         return new Location(mapWidth - loc.x - 1, mapHeight - loc.y - 1);
+    }
+
+    public boolean isDiagonalDir(Direction dir) {
+        return dir == Direction.NORTHEAST || dir == Direction.NORTHWEST || dir == Direction.SOUTHEAST || dir == Direction.SOUTHWEST;
     }
 }
