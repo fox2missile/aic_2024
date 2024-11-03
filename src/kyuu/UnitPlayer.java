@@ -2,6 +2,7 @@ package kyuu;
 
 import aic2024.user.StructureType;
 import aic2024.user.UnitController;
+import kyuu.experiments.BytecodeExperiment;
 import kyuu.log.LoggerStandard;
 import kyuu.tasks.Task;
 

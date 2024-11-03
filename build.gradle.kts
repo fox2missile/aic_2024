@@ -30,5 +30,5 @@ dependencies {
 }
 
 application {
-    mainClass = "kyuu.fast.CircularLocBuffer"
+    mainClass = "fast.Compiler"
 }

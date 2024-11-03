@@ -30,13 +30,18 @@ public class PriorityQueue<T extends Comparable<T>> {
 
     private void siftUp(int k, T x) {
         Comparable<? super T> key = (Comparable<? super T>) x;
+        // @unroll
         while (k > 0) {
+            {
             int parent = (k - 1) >>> 1;
             Object e = heap[parent];
             if (key.compareTo((T) e) >= 0)
                 break;
             heap[k] = (T)e;
             k = parent;
+            }
+
+            int parent = 2;
         }
         heap[k] = (T)key;
     }
@@ -44,6 +49,7 @@ public class PriorityQueue<T extends Comparable<T>> {
     private void siftDown(int k, T x) {
         Comparable<? super T> key = (Comparable<? super T>)x;
         int half = size >>> 1;        // loop while a non-leaf
+        // @unroll
         while (k < half) {
             int child = (k << 1) + 1; // assume left child is least
             Object c = heap[child];
