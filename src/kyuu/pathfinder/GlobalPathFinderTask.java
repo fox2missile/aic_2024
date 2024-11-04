@@ -28,6 +28,9 @@ public class GlobalPathFinderTask extends Task {
     FastLocSet closed;
     FastLocLocMap parents;
 
+    Location[] sortLocBuffer;
+    int[] sortLocBufferKeys;
+    
 
     public int extraPriority;
 
@@ -58,6 +61,10 @@ public class GlobalPathFinderTask extends Task {
         minG.add(destination, 0);
         fullMappedCount = 0;
         iterationLeft = MAX_ITERATION;
+
+        // buffers
+        sortLocBuffer = new Location[16];
+        sortLocBufferKeys = new int[16];
     }
 
     @Override
@@ -170,51 +177,57 @@ public class GlobalPathFinderTask extends Task {
         closed.add(currentLoc);
     }
 
-    private void reconstructPath() {
-        int pathIdx = ldb.allocatePathBuffer(destination, start);
-        Location[] saveBuffer = ldb.knownPaths[pathIdx];
-        saveBuffer[0] = destination;
-        int length = 1;
-        Location current = finalLoc;
-        while (current != null) {
-            saveBuffer[length++] = current;
-            // todo: delete debug
-            uc.drawPointDebug(current, 0, 127, 255);
-            current = parents.getVal(current);
-        }
-        ldb.knownPathsLength[pathIdx] = length;
-        pathReported = true;
-    }
+    // private void reconstructPath() {
+    //     int pathIdx = ldb.allocatePathBuffer(destination, start);
+    //     Location[] saveBuffer = ldb.knownPaths[pathIdx];
+    //     saveBuffer[0] = destination;
+    //     int length = 1;
+    //     Location current = finalLoc;
+    //     while (current != null) {
+    //         saveBuffer[length++] = current;
+    //         // todo: delete debug
+    //         uc.drawPointDebug(current, 0, 127, 255);
+    //         current = parents.getVal(current);
+    //     }
+    //     ldb.knownPathsLength[pathIdx] = length;
+    //     pathReported = true;
+    // }
 
     public boolean validStart(Location startPoint) {
         return closed.contains(startPoint);
     }
 
-    public int constructPath(Location startPoint, FastLocIntMap congestion, Location[] out) {
+    public int constructFullPath(Location startPoint, Location[] out) {
         Location current = startPoint;
-        Location next;
-        Location check;
-        int checkCongestion;
         int length = 0;
         while (!current.equals(destination)) {
+            current = parents.getVal(current);
             out[length++] = current;
-            next = parents.getVal(current);
-            int nextCongestion = congestion.getVal(next);
-            if (nextCongestion > 0) {
-                for (Direction dir: c.allDirs) {
-                    check = current.add(dir);
-                    if (!closed.contains(check)) {
-                        continue;
-                    }
-                    checkCongestion = congestion.getVal(check);
-                    if (checkCongestion < nextCongestion) {
-                        nextCongestion = checkCongestion;
-                        next = check;
-                    }
-                }
-            }
-            current = next;
         }
+        return length;
+    }
+
+    public int getNextCandidates(Location startPoint, Location[] out) {
+        int length = 0;
+        int currentG = minG.getVal(startPoint);
+
+        for (Direction dir: c.allDirs) {
+            Location check = startPoint.add(dir);
+            if (!minG.contains(check)) {
+                continue;
+            }
+            int checkG = minG.getVal(check);
+            if (checkG < currentG) {
+                sortLocBuffer[length] = check;
+                sortLocBufferKeys[length] = checkG;
+                length++;
+            }
+        }
+
+        if (map.getVal(startPoint) % dc.TILE_HYPER_JUMP == 0) {
+            
+        }
+
         return length;
     }
 }

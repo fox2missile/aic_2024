@@ -18,6 +18,10 @@ public class FastNodePriorityQueue {
         size++;
     }
 
+    public void clear() {
+        size = 0;
+    }
+
     public Node poll() {
         Node min = heap[0];
         heap[0] = heap[size - 1];

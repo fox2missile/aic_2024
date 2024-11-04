@@ -209,7 +209,7 @@ public class PathPlannerTask extends Task {
         scanNearby();
         for (int i = 0; i < pathFindersLength; i++) {
             if (pathFinderComplete[i] != null && (pathFinderInProgress[i] == null || pathFinderInProgress[i].progress == 0)) {
-                pathFinderInProgress[i] = new GlobalPathFinderTask(c, pathFinderComplete[i].start, pathFinderComplete[i].destination, map, pathFinderComplete[i].extraPriority);
+                // pathFinderInProgress[i] = new GlobalPathFinderTask(c, pathFinderComplete[i].start, pathFinderComplete[i].destination, map, pathFinderComplete[i].extraPriority);
             }
         }
     }
@@ -254,19 +254,19 @@ public class PathPlannerTask extends Task {
         if (enemyHq1 == null) {
             if (rdb.enemyHqSize >= 1) {
                 enemyHq1 = rdb.enemyHq[0];
-                pathFinderInProgress[pathFindersLength++] = new GlobalPathFinderTask(c, c.loc, enemyHq1, map, 1);
+                // pathFinderInProgress[pathFindersLength++] = new GlobalPathFinderTask(c, c.loc, enemyHq1, map, 1);
             }
         }
         if (enemyHq2 == null) {
             if (rdb.enemyHqSize >= 2) {
                 enemyHq2 = rdb.enemyHq[1];
-                pathFinderInProgress[pathFindersLength++] = new GlobalPathFinderTask(c, c.loc, enemyHq2, map, 1);
+                // pathFinderInProgress[pathFindersLength++] = new GlobalPathFinderTask(c, c.loc, enemyHq2, map, 1);
             }
         }
         if (enemyHq3 == null) {
             if (rdb.enemyHqSize >= 3) {
                 enemyHq3 = rdb.enemyHq[2];
-                pathFinderInProgress[pathFindersLength++] = new GlobalPathFinderTask(c, c.loc, enemyHq3, map, 1);
+                // pathFinderInProgress[pathFindersLength++] = new GlobalPathFinderTask(c, c.loc, enemyHq3, map, 1);
             }
         }
 
@@ -284,7 +284,7 @@ public class PathPlannerTask extends Task {
                 if (state != dc.SURVEY_BAD) {
                     if (!mappedExpansionLocs.contains(ex.expansionLoc, expansionSite)) {
                         mappedExpansionLocs.add(ex.expansionLoc, expansionSite);
-                        pathFinderInProgress[pathFindersLength++] = new GlobalPathFinderTask(c, ex.expansionLoc, expansionSite, map, 0);
+                        // pathFinderInProgress[pathFindersLength++] = new GlobalPathFinderTask(c, ex.expansionLoc, expansionSite, map, 0);
                     }
                 }
 
